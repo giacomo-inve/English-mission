@@ -6,34 +6,153 @@ const assert = require('assert');
 
 console.log('🧪 RUNNING: tests/progression-headless.test.cjs\n');
 
-// 1. Text Normalization & Verification Logic (mirrors Lesson.tsx)
+// 1. Text Normalization & Verification Logic (mirrors exerciseValidator.ts)
 function normalizeAnswer(text) {
+  if (!text) return '';
   return text
+    .trim()
     .toLowerCase()
     .replace(/[’']/g, "'")
+    // Rimuovi punteggiatura finale prima del confronto
+    .replace(/[.,/#!$%^&*;:{}=\-_`~()?]+$/g, '')
+    // Rimuovi punteggiatura interna (conserva l'apostrofo per contrazioni)
     .replace(/[.,/#!$%^&*;:{}=\-_`~()?]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-function verifyAnswer(userInput, target) {
-  const normUser = normalizeAnswer(userInput);
-  if (!normUser) return false;
-  if (Array.isArray(target)) {
-    return target.some((ans) => normalizeAnswer(ans) === normUser);
+function extractBlankTemplates(exercise) {
+  if (!exercise) return [];
+  const rawTemplates = [];
+
+  if (exercise.prompt && /_{2,}/.test(exercise.prompt)) {
+    rawTemplates.push(exercise.prompt);
   }
-  return normalizeAnswer(target) === normUser;
+  if (exercise.contextSentence && /_{2,}/.test(exercise.contextSentence)) {
+    rawTemplates.push(exercise.contextSentence);
+  }
+  if (exercise.dialogue && Array.isArray(exercise.dialogue)) {
+    for (const turn of exercise.dialogue) {
+      if (turn.text && /_{2,}/.test(turn.text)) {
+        rawTemplates.push(turn.text);
+      }
+    }
+  }
+
+  const allTemplates = new Set();
+  for (const t of rawTemplates) {
+    allTemplates.add(t);
+    const quoteMatches = t.match(/["“'«]([^"”'»]*_{2,}[^"”'»]*)["”'»]/g);
+    if (quoteMatches) {
+      for (const q of quoteMatches) {
+        const cleaned = q.replace(/^["“'«]|["”'»]$/g, '').trim();
+        if (/_{2,}/.test(cleaned)) {
+          allTemplates.add(cleaned);
+        }
+      }
+    }
+    const sentences = t.split(/(?<=[.!?])\s+|\n+/);
+    for (const s of sentences) {
+      const trimmed = s.trim();
+      if (/_{2,}/.test(trimmed) && trimmed !== t) {
+        allTemplates.add(trimmed);
+      }
+    }
+  }
+  return Array.from(allTemplates);
 }
 
-// ── Test 1: Answer Verification Logic ──
-console.log('--- TEST 1: Answer Normalization & Verification ---');
+function verifyAnswer(userInput, target, exercise) {
+  const normUser = normalizeAnswer(userInput);
+  if (!normUser) return false;
+
+  const targets = Array.isArray(target) ? target : [target];
+
+  // 1. Validazione diretta (singola parola o frase target esatta)
+  const directMatch = targets.some((ans) => normalizeAnswer(ans) === normUser);
+  if (directMatch) return true;
+
+  // 2. Validazione intelligente per CLOZE
+  if (exercise) {
+    if (exercise.audioText) {
+      const normAudio = normalizeAnswer(exercise.audioText);
+      if (normAudio && normAudio === normUser) return true;
+    }
+
+    const templates = extractBlankTemplates(exercise);
+    for (const template of templates) {
+      for (const ans of targets) {
+        const reconstructed = template.replace(/_{2,}/g, ans);
+        if (normalizeAnswer(reconstructed) === normUser) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+// ── Test 1: Answer Verification & Intelligent Cloze Logic ──
+console.log('--- TEST 1: Answer Normalization & Intelligent Cloze Verification ---');
 assert.strictEqual(verifyAnswer("have been monitoring", "have been monitoring"), true);
 assert.strictEqual(verifyAnswer("HAVE BEEN MONITORING!", "have been monitoring"), true);
 assert.strictEqual(verifyAnswer("I have lived here for 3 years.", ["I have lived here for 3 years", "I've lived here for 3 years"]), true);
 assert.strictEqual(verifyAnswer("I’ve lived here for 3 years.", ["I have lived here for 3 years", "I've lived here for 3 years"]), true); // Smart quote normalization
 assert.strictEqual(verifyAnswer("wrong answer", "correct answer"), false);
 assert.strictEqual(verifyAnswer("", "correct answer"), false);
-console.log('  ✅ Answer Normalization PASSED');
+
+// Cloze Single Word vs Full Sentence Test
+const sampleClozeExercise = {
+  id: 'cloze-test-1',
+  type: 'cloze',
+  prompt: 'Have you received the updated trajectory coordinates from Houston _____?',
+  correctAnswer: 'yet',
+  audioText: 'Have you received the updated trajectory coordinates from Houston yet?'
+};
+
+// 1a. User enters only the target word
+assert.strictEqual(verifyAnswer("yet", sampleClozeExercise.correctAnswer, sampleClozeExercise), true, 'Cloze single word must pass');
+assert.strictEqual(verifyAnswer("  YET. ", sampleClozeExercise.correctAnswer, sampleClozeExercise), true, 'Cloze single word with whitespace and trailing punctuation must pass');
+
+// 1b. User enters the full rewritten sentence
+assert.strictEqual(
+  verifyAnswer("Have you received the updated trajectory coordinates from Houston yet?", sampleClozeExercise.correctAnswer, sampleClozeExercise),
+  true,
+  'Cloze full rewritten sentence must pass'
+);
+assert.strictEqual(
+  verifyAnswer("have you received the updated trajectory coordinates from houston yet", sampleClozeExercise.correctAnswer, sampleClozeExercise),
+  true,
+  'Cloze full sentence lowercase no punctuation must pass'
+);
+
+// 1c. User enters incorrect word or sentence
+assert.strictEqual(
+  verifyAnswer("already", sampleClozeExercise.correctAnswer, sampleClozeExercise),
+  false,
+  'Cloze incorrect word must fail'
+);
+assert.strictEqual(
+  verifyAnswer("Have you received the updated trajectory coordinates from Houston already?", sampleClozeExercise.correctAnswer, sampleClozeExercise),
+  false,
+  'Cloze incorrect sentence must fail'
+);
+
+// 1d. Cloze with dialogue turn
+const sampleDialogueCloze = {
+  id: 'cloze-dialogue-1',
+  type: 'cloze',
+  prompt: 'Flight Director feedback:',
+  dialogue: [
+    { speaker: 'CAPCOM', text: 'Telemetry confirmed.' },
+    { speaker: 'FLIGHT', text: 'All systems _____ nominal for re-entry.' }
+  ],
+  correctAnswer: 'are'
+};
+assert.strictEqual(verifyAnswer("are", sampleDialogueCloze.correctAnswer, sampleDialogueCloze), true);
+assert.strictEqual(verifyAnswer("All systems are nominal for re-entry.", sampleDialogueCloze.correctAnswer, sampleDialogueCloze), true);
+assert.strictEqual(verifyAnswer("All systems were nominal for re-entry.", sampleDialogueCloze.correctAnswer, sampleDialogueCloze), false);
+
+console.log('  ✅ Answer Normalization & Intelligent Cloze PASSED');
 
 // ── Test 2: Decoupled Session Runner Simulation ──
 console.log('\n--- TEST 2: Session Queue & Index Decoupling Simulation ---');

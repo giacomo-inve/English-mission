@@ -26,6 +26,7 @@ import { useProgress } from '../hooks/useProgress'
 import ProgressBar from '../components/ProgressBar'
 import GhostButton from '../components/GhostButton'
 import { playSuccessChime, playErrorHum, playNavClick, playNavTab, playModalToggle } from '../utils/sfx'
+import { verifyAnswer, normalizeAnswer } from '../utils/exerciseValidator'
 
 const LEVEL_LIST = ['A1', 'A2', 'B1', 'B2'] as const
 type LevelType = (typeof LEVEL_LIST)[number]
@@ -43,24 +44,6 @@ function speak(text: string, rate = 0.9) {
   utt.lang = 'en-GB'
   utt.rate = rate
   window.speechSynthesis.speak(utt)
-}
-
-function normalizeAnswer(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[’']/g, "'")
-    .replace(/[.,/#!$%^&*;:{}=\-_`~()?]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function verifyAnswer(userInput: string, target: string | string[]): boolean {
-  const normUser = normalizeAnswer(userInput)
-  if (!normUser) return false
-  if (Array.isArray(target)) {
-    return target.some((ans) => normalizeAnswer(ans) === normUser)
-  }
-  return normalizeAnswer(target) === normUser
 }
 
 // ─────────────────────────────────────────
@@ -153,14 +136,14 @@ function ExerciseCard({ exercise, onVerified, answerState, onNext, isLast }: Exe
     playNavClick()
     setSelectedOption(idx)
     const selectedText = exercise.options?.[idx] ?? ''
-    const isCorrect = verifyAnswer(selectedText, exercise.correctAnswer)
+    const isCorrect = verifyAnswer(selectedText, exercise.correctAnswer, exercise)
     onVerified(isCorrect)
   }
 
   // Handle text-based answer (cloze, sentence-transformation, listening-dictation)
   const handleSubmitText = () => {
     if (answerState !== 'idle' || !textInput.trim()) return
-    const isCorrect = verifyAnswer(textInput, exercise.correctAnswer)
+    const isCorrect = verifyAnswer(textInput, exercise.correctAnswer, exercise)
     onVerified(isCorrect)
   }
 
@@ -189,7 +172,7 @@ function ExerciseCard({ exercise, onVerified, answerState, onNext, isLast }: Exe
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript
         setTextInput(transcript)
-        const isCorrect = verifyAnswer(transcript, exercise.correctAnswer)
+        const isCorrect = verifyAnswer(transcript, exercise.correctAnswer, exercise)
         onVerified(isCorrect)
         setIsListening(false)
       }
@@ -356,7 +339,7 @@ function ExerciseCard({ exercise, onVerified, answerState, onNext, isLast }: Exe
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
           {exercise.options.map((option, i) => {
             const isSelected = selectedOption === i
-            const isCorrectOption = verifyAnswer(option, exercise.correctAnswer)
+            const isCorrectOption = verifyAnswer(option, exercise.correctAnswer, exercise)
 
             let style = 'bg-bg-section border-border-subtle text-text-display hover:border-text-display'
             if (answerState !== 'idle') {
@@ -408,7 +391,7 @@ function ExerciseCard({ exercise, onVerified, answerState, onNext, isLast }: Exe
               placeholder={
                 exercise.type === 'listening-dictation'
                   ? 'Trascrivi il messaggio ascoltato...'
-                  : 'Scrivi qui la parola o espressione mancante...'
+                  : 'Scrivi solo la parola mancante (es. yet)...'
               }
               className="flex-1 bg-bg-section border border-border-subtle rounded px-4 py-3 text-sm text-text-display font-sans placeholder:text-text-content/30 focus:outline-none focus:border-signal-ok disabled:opacity-60"
               autoFocus
