@@ -106,10 +106,10 @@ const MISSIONS: LevelMission[] = [
     themeDesc: 'Manovra di inserimento translunare. Collegamento tra passato e presente col Present Perfect, conditionals e phrasal verbs professionali.',
     icon: Compass,
     units: [
-      { id: 'u-b1-1', title: '01 · Present Perfect vs Past Simple', desc: 'Esperienze di vita con ever/never e specificità temporali.' },
-      { id: 'u-b1-2', title: '02 · Periodo Ipotetico (Conditionals)', desc: 'Zero, First e Second Conditional per ipotesi e conseguenze.' },
-      { id: 'u-b1-3', title: '03 · Phrasal Verbs e Conversazione Spontanea', desc: 'Espressioni idiomatiche verbali (look forward, give up, set off).' },
-      { id: 'u-b1-4', title: '04 · Lavoro, Meeting e Comunicazione Formale', desc: 'Email di lavoro, presentazioni e gestione di deadline.' },
+      { id: 'u-b1-1', title: '01 · Tempo & Durata', desc: 'Present Perfect vs Past Simple; for, since, yet, already, just.' },
+      { id: 'u-b1-2', title: '02 · Ipotesi & Probabilità', desc: 'Zero, First e Second Conditional; would + base form vs will.' },
+      { id: 'u-b1-3', title: '03 · Modali di Deduzione & Obbligo', desc: 'Must, have to, should, might, can\'t; divieto (mustn\'t) vs assenza obbligo (don\'t have to).' },
+      { id: 'u-b1-4', title: '04 · Passivo Base & Relative Clauses', desc: 'Present/Past Simple passive; defining & non-defining clauses (who, which, that, whose, where).' },
     ],
     unlockTest: [
       {
@@ -145,10 +145,10 @@ const MISSIONS: LevelMission[] = [
     themeDesc: 'Avvicinamento alla superficie marziana. Piena autonomia comunicativa, forma passiva avanzata, discorso indiretto e argomentazione accademica.',
     icon: Sparkles,
     units: [
-      { id: 'u-b2-1', title: '01 · Forma Passiva e Registro Tecnico', desc: 'Enfasi sull\'azione e processi formali (the mission was launched).' },
-      { id: 'u-b2-2', title: '02 · Discorso Indiretto (Reported Speech)', desc: 'Riferire dichiarazioni altrui con shift dei tempi verbali.' },
-      { id: 'u-b2-3', title: '03 · Modali di Deduzione e Registro Accademico', desc: 'Must have, can\'t have, might have per speculazioni logiche.' },
-      { id: 'u-b2-4', title: '04 · Fluency e Argomentazione Complessa', desc: 'Articolare opinioni con connettivi complessi (furthermore, nevertheless).' },
+      { id: 'u-b2-1', title: '01 · Condizionali Complessi & Wishes', desc: 'Third Conditional, Mixed Conditionals, strutture con wish e if only.' },
+      { id: 'u-b2-2', title: '02 · Reported Speech & Reporting Verbs', desc: 'Verbi reggenti avanzati (admit doing, deny having done, convince, suggest that).' },
+      { id: 'u-b2-3', title: '03 · Forme Passive Avanzate & Causativi', desc: 'Modal passives (must have been done); causativo have/get something done.' },
+      { id: 'u-b2-4', title: '04 · Inversioni Formali & Discourse Markers', desc: 'Inversioni negative (rarely, under no circumstances); connettori whereas, furthermore.' },
     ],
     unlockTest: [
       {
@@ -239,10 +239,10 @@ export default function Percorso() {
     }, 800)
   }
 
-  const handleUnitClick = async (unitId: string) => {
+  const handleUnitClick = async (levelId: string, unitId: string) => {
     await completeUnit(unitId)
     await loadProgress()
-    navigate('/lezione')
+    navigate(`/lezione?level=${levelId}&unit=${unitId}`)
   }
 
   return (
@@ -339,7 +339,7 @@ export default function Percorso() {
                   return (
                     <button
                       key={unit.id}
-                      onClick={() => handleUnitClick(unit.id)}
+                      onClick={() => handleUnitClick(mission.levelId, unit.id)}
                       className="group text-left p-4 rounded bg-bg-primary/60 border border-border-subtle hover:border-text-display transition-all"
                     >
                       <div className="flex items-center justify-between mb-1.5">

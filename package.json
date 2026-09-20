@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node tests/audit-curriculum.test.cjs && node tests/progression-headless.test.cjs"
   },
   "dependencies": {
     "dexie": "^4.0.8",
