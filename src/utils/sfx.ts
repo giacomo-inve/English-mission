@@ -177,3 +177,120 @@ export function playStartRecording(): void {
     playDroidBeep()
   }, 60)
 }
+
+/**
+ * Nav Click:
+ * Tocco tattile sintetico futuristico per navigazione, pulsanti e selezioni (1200Hz -> 600Hz in 35ms)
+ */
+export function playNavClick(): void {
+  const ctx = getAudioContext()
+  if (!ctx) return
+
+  const now = ctx.currentTime
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+
+  osc.type = 'sine'
+  osc.frequency.setValueAtTime(1200, now)
+  osc.frequency.exponentialRampToValueAtTime(600, now + 0.035)
+
+  gain.gain.setValueAtTime(0.001, now)
+  gain.gain.linearRampToValueAtTime(0.08, now + 0.004)
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.035)
+
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+
+  osc.start(now)
+  osc.stop(now + 0.04)
+}
+
+/**
+ * Nav Tab / Level Switch:
+ * Sweep armonico morbido a due toni per cambio schermata o livello (740Hz -> 1100Hz)
+ */
+export function playNavTab(): void {
+  const ctx = getAudioContext()
+  if (!ctx) return
+
+  const now = ctx.currentTime
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+
+  osc.type = 'triangle'
+  osc.frequency.setValueAtTime(740, now)
+  osc.frequency.exponentialRampToValueAtTime(1100, now + 0.06)
+
+  gain.gain.setValueAtTime(0.001, now)
+  gain.gain.linearRampToValueAtTime(0.09, now + 0.008)
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07)
+
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+
+  osc.start(now)
+  osc.stop(now + 0.075)
+}
+
+/**
+ * Unit Select:
+ * Chirp staccato a tre gradini ascendenti all'avvio o selezione di una missione (880 -> 1175 -> 1760 Hz)
+ */
+export function playUnitSelect(): void {
+  const ctx = getAudioContext()
+  if (!ctx) return
+
+  const now = ctx.currentTime
+  const freqs = [880, 1175, 1760]
+  freqs.forEach((f, i) => {
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+
+    const t = now + i * 0.035
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(f, t)
+
+    gain.gain.setValueAtTime(0.001, t)
+    gain.gain.linearRampToValueAtTime(0.1, t + 0.005)
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+
+    osc.start(t)
+    osc.stop(t + 0.035)
+  })
+}
+
+/**
+ * Modal Toggle:
+ * Transizione sonora per apertura/chiusura popup o drawer di navigazione
+ */
+export function playModalToggle(open: boolean = true): void {
+  const ctx = getAudioContext()
+  if (!ctx) return
+
+  const now = ctx.currentTime
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+
+  osc.type = 'sine'
+  if (open) {
+    osc.frequency.setValueAtTime(440, now)
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.08)
+  } else {
+    osc.frequency.setValueAtTime(780, now)
+    osc.frequency.exponentialRampToValueAtTime(360, now + 0.08)
+  }
+
+  gain.gain.setValueAtTime(0.001, now)
+  gain.gain.linearRampToValueAtTime(0.07, now + 0.01)
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08)
+
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+
+  osc.start(now)
+  osc.stop(now + 0.085)
+}
+

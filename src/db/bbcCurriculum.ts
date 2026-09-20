@@ -128,13 +128,13 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Dettato audio: orario e durata',
     contextScenario: 'Airport gate announcement for European business transit',
     dialogue: [
-      { speaker: 'Gate PA', text: 'Attention please. The Heathrow shuttle has been waiting at Gate 4 for thirty minutes.' },
+      { speaker: 'Gate PA', text: 'Attention please. The Heathrow shuttle _____ at Gate 4 for thirty minutes.' },
     ],
-    prompt: 'Ascolta e trascrivi fedelmente la frase di annuncio:',
+    prompt: 'Ascolta l\'annuncio e inserisci la forma verbale corretta al Present Perfect Continuous:',
     type: 'cloze',
     correctAnswer: [
-      'The Heathrow shuttle has been waiting at Gate 4 for thirty minutes.',
-      'The Heathrow shuttle has been waiting at Gate 4 for thirty minutes',
+      'has been waiting',
+      'has been waiting for thirty minutes',
     ],
     explanation: {
       rule: 'Present Perfect Continuous con "for + durata" ("for thirty minutes").',
@@ -153,9 +153,9 @@ export const BBC_EXERCISES: BBCExercise[] = [
     contextScenario: 'Formal business email follow-up over telephone',
     dialogue: [
       { speaker: 'Client', text: 'When should we expect the revised project quote?' },
-      { speaker: 'Manager', text: 'I am looking forward to sending it to you before Friday afternoon.' },
+      { speaker: 'Manager', text: 'I am _____ it to you before Friday afternoon.' },
     ],
-    prompt: 'Pronuncia ad alta voce la formula diplomatica:',
+    prompt: 'Seleziona la formula diplomatica corretta del phrasal verb:',
     type: 'multiple-choice',
     options: ['looking forward to sending', 'looking forward to send', 'looking forward send', 'look forward send'],
     correctAnswer: 'looking forward to sending',
@@ -175,15 +175,15 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Sentence Transformation con Despite',
     contextScenario: 'Corporate report on flight delay resolution',
     dialogue: [
-      { speaker: 'Editor', text: 'Can we make this sentence sound more concise and professional?' },
+      { speaker: 'Original', text: 'Although the crew faced severe headwinds, they arrived on schedule.' },
     ],
-    prompt: 'Riscrivi la frase usando "Despite": "Although the crew faced severe headwinds, they arrived on schedule."',
+    prompt: 'Completa la trasformazione con "Despite": "Despite _____, they arrived on schedule."',
     type: 'sentence-transformation',
     options: undefined,
     correctAnswer: [
-      'Despite the severe headwinds, they arrived on schedule.',
-      'Despite facing severe headwinds, they arrived on schedule.',
-      'Despite the severe headwinds they arrived on schedule',
+      'the severe headwinds',
+      'facing severe headwinds',
+      'the headwinds',
     ],
     explanation: {
       rule: '"Despite" sostituisce "Although" trasformando la proposizione con verbo in un sintagma nominale ("the severe headwinds") o gerundio ("facing severe headwinds").',
@@ -358,13 +358,14 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Dettato: Might be vs Can\'t be',
     contextScenario: 'Radio interference analysis in the communications pod',
     dialogue: [
-      { speaker: 'Operator', text: 'Listen to this low-frequency hum. It might be interference from the lunar relay.' },
+      { speaker: 'Operator', text: 'Listen to this low-frequency hum. It _____ from the lunar relay.' },
     ],
-    prompt: 'Ascolta e trascrivi la frase di speculazione probabilistica:',
+    prompt: 'Ascolta l\'audio e inserisci il modale di speculazione e la causa mancante:',
     type: 'cloze',
     correctAnswer: [
-      'It might be interference from the lunar relay.',
-      'It might be interference from the lunar relay',
+      'might be interference',
+      'might be interference from',
+      'might be interference from the lunar relay',
     ],
     explanation: {
       rule: '"Might be" esprime una speculazione plausibile ma non confermata al presente (probabilità del 30-50%).',
@@ -473,9 +474,9 @@ export const BBC_EXERCISES: BBCExercise[] = [
     contextScenario: 'Colleague offering constructive feedback on presentation slides',
     dialogue: [
       { speaker: 'Elena', text: 'Does my mission timeline chart look too cluttered?' },
-      { speaker: 'David', text: 'You should probably simplify the legend so it is easier to read.' },
+      { speaker: 'David', text: '_____ so it is easier to read.' },
     ],
-    prompt: 'Pronuncia la frase di consiglio con intonazione morbida e diplomatica:',
+    prompt: 'Scegli la formula di consiglio formulata con intonazione morbida e diplomatica:',
     type: 'multiple-choice',
     options: ['You should probably simplify the legend', 'You must simplify the legend', 'You ought simplify the legend', 'You had simplify the legend'],
     correctAnswer: 'You should probably simplify the legend',
@@ -585,13 +586,13 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Dettato audio: Second Conditional',
     contextScenario: 'Astronaut debriefing interview for BBC radio',
     dialogue: [
-      { speaker: 'Presenter', text: 'If you could travel anywhere in the Solar System, where would you go?' },
+      { speaker: 'Presenter', text: 'If you could travel anywhere in the Solar System, _____?' },
     ],
-    prompt: 'Ascolta la domanda e trascrivila con punteggiatura corretta:',
+    prompt: 'Ascolta la clip audio e completa la parte finale della domanda: "If you could travel anywhere in the Solar System, _____?"',
     type: 'cloze',
     correctAnswer: [
-      'If you could travel anywhere in the Solar System, where would you go?',
-      'If you could travel anywhere in the Solar System where would you go',
+      'where would you go',
+      'where would you go?',
     ],
     explanation: {
       rule: 'Second conditional con "could" nella proposizione ipotetica: "If you could... where would you go?".',
@@ -814,13 +815,12 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Dettato audio: Past Perfect',
     contextScenario: 'News bulletin report on spacecraft telemetry milestone',
     dialogue: [
-      { speaker: 'Radio Announcer', text: 'By the time ground control received the signal, the rover had reached the crater.' },
+      { speaker: 'Radio Announcer', text: 'By the time ground control received the signal, the rover _____ the crater.' },
     ],
-    prompt: 'Ascolta e trascrivi la frase temporale complessa:',
+    prompt: 'Ascolta la clip audio e inserisci la forma corretta del Past Perfect (due parole):',
     type: 'cloze',
     correctAnswer: [
-      'By the time ground control received the signal, the rover had reached the crater.',
-      'By the time ground control received the signal the rover had reached the crater',
+      'had reached',
     ],
     explanation: {
       rule: '"By the time + Past Simple" è regolarmente associato al Past Perfect nella proposizione principale ("had reached").',
@@ -926,9 +926,9 @@ export const BBC_EXERCISES: BBCExercise[] = [
     contextScenario: 'Astronaut recounting an unexpected sighting from the cupola',
     dialogue: [
       { speaker: 'Journalist', text: 'What did you feel when you first saw the Southern Lights?' },
-      { speaker: 'Astronaut', text: 'We had been working in total darkness, and then suddenly the sky illuminated.' },
+      { speaker: 'Astronaut', text: 'We had been working in total darkness, _____.' },
     ],
-    prompt: 'Pronuncia la frase narrativa variando l\'intonazione sul marcatore temporale:',
+    prompt: 'Completa la narrazione dell\'astronauta con il marcatore temporale e la clausola corretta:',
     type: 'multiple-choice',
     options: ['and then suddenly the sky illuminated', 'and suddenly sky illuminated', 'and then sky was illuminate', 'and then sudden sky illuminated'],
     correctAnswer: 'and then suddenly the sky illuminated',
@@ -1036,13 +1036,12 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Dettato audio: Dependent Preposition',
     contextScenario: 'Interview broadcast on BBC World Service',
     dialogue: [
-      { speaker: 'Presenter', text: 'Dr. Harris is famous for discovering water vapor in planetary atmospheres.' },
+      { speaker: 'Presenter', text: 'Dr. Harris is famous _____ water vapor in planetary atmospheres.' },
     ],
-    prompt: 'Ascolta e trascrivi la frase di presentazione:',
+    prompt: 'Ascolta la clip audio e inserisci la preposizione e il gerundio mancanti (due parole):',
     type: 'cloze',
     correctAnswer: [
-      'Dr. Harris is famous for discovering water vapor in planetary atmospheres.',
-      'Dr. Harris is famous for discovering water vapor in planetary atmospheres',
+      'for discovering',
     ],
     explanation: {
       rule: 'L\'aggettivo "famous" regge la preposizione "for" seguita da sostantivo o gerundio ("famous for discovering").',
@@ -1106,9 +1105,9 @@ export const BBC_EXERCISES: BBCExercise[] = [
     contextScenario: 'Radio check between flight engineer and telemetry ground station',
     dialogue: [
       { speaker: 'Radio Tech', text: 'Can you confirm telemetry sync with station Alpha?' },
-      { speaker: 'Engineer', text: 'Confirmed. We are in continuous communication with station Alpha.' },
+      { speaker: 'Engineer', text: 'Confirmed. _____.' },
     ],
-    prompt: 'Pronuncia la frase collegando "in" e "continuous" con naturalezza:',
+    prompt: 'Completa la risposta dell\'ingegnere scegliendo la formula formale corretta:',
     type: 'multiple-choice',
     options: ['We are in continuous communication with station Alpha', 'We are continuous communication with station Alpha', 'We communicate in continuous with station Alpha', 'We are on continuous communication with station Alpha'],
     correctAnswer: 'We are in continuous communication with station Alpha',
@@ -1289,13 +1288,13 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Dettato audio: Inversione con Seldom',
     contextScenario: 'Documentary voiceover on Mars rover longevity',
     dialogue: [
-      { speaker: 'Narrator', text: 'Seldom has an automated planetary mission exceeded its projected lifespan so dramatically.' },
+      { speaker: 'Narrator', text: '_____ an automated planetary mission exceeded its projected lifespan so dramatically.' },
     ],
-    prompt: 'Ascolta e trascrivi fedelmente la frase con inversione formale:',
+    prompt: 'Ascolta la clip audio e inserisci le due parole iniziali con inversione enfatica:',
     type: 'cloze',
     correctAnswer: [
-      'Seldom has an automated planetary mission exceeded its projected lifespan so dramatically.',
-      'Seldom has an automated planetary mission exceeded its projected lifespan so dramatically',
+      'Seldom has',
+      'seldom has',
     ],
     explanation: {
       rule: '"Seldom" (raramente) a inizio frase richiede l\'inversione dell\'ausiliare: "Seldom has + subject + past participle".',
@@ -1314,9 +1313,9 @@ export const BBC_EXERCISES: BBCExercise[] = [
     contextScenario: 'Radio interview discussing aerospace career decisions',
     dialogue: [
       { speaker: 'Host', text: 'Would you make the same choices if you could start over?' },
-      { speaker: 'Scientist', text: 'Had I known how challenging orbital astrophysics was, I might have hesitated.' },
+      { speaker: 'Scientist', text: '_____, I might have hesitated.' },
     ],
-    prompt: 'Pronuncia la frase con la struttura d\'inversione colta "Had I known":',
+    prompt: 'Completa la risposta dello scienziato con la corretta struttura d\'inversione condizionale:',
     type: 'multiple-choice',
     options: ['Had I known how challenging orbital astrophysics was', 'If I had knew how challenging orbital astrophysics was', 'Have I known how challenging orbital astrophysics was', 'Did I know how challenging orbital astrophysics was'],
     correctAnswer: 'Had I known how challenging orbital astrophysics was',
@@ -1497,13 +1496,12 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Dettato audio: Modal Deduction Passata',
     contextScenario: 'Radio drama segment on deep space signal decode',
     dialogue: [
-      { speaker: 'Radio Officer', text: 'The automated deep space probe must have encountered extreme cosmic radiation.' },
+      { speaker: 'Radio Officer', text: 'The automated deep space probe _____ extreme cosmic radiation.' },
     ],
-    prompt: 'Ascolta e trascrivi con precisione ortografica:',
+    prompt: 'Ascolta la trasmissione e inserisci la deduzione passata mancante (modal + have + verb):',
     type: 'cloze',
     correctAnswer: [
-      'The automated deep space probe must have encountered extreme cosmic radiation.',
-      'The automated deep space probe must have encountered extreme cosmic radiation',
+      'must have encountered',
     ],
     explanation: {
       rule: 'Deduzione passata con "must have encountered".',
@@ -1521,9 +1519,9 @@ export const BBC_EXERCISES: BBCExercise[] = [
     contextScenario: 'Audio debriefing practice: pronouncing modal contractions',
     dialogue: [
       { speaker: 'Cadet', text: 'Could the telemetry crew have prevented the signal loss?' },
-      { speaker: 'Captain', text: 'They might have mitigated it, but they couldn\'t have prevented it entirely.' },
+      { speaker: 'Captain', text: '_____, but they couldn\'t have prevented it entirely.' },
     ],
-    prompt: 'Pronuncia la frase collegando "might have" come /ˈmaɪt.əv/:',
+    prompt: 'Completa la risposta del capitano selezionando la frase corretta con il passato modale ipotetico:',
     type: 'multiple-choice',
     options: ['They might have mitigated it', 'They might mitigated it', 'They must to mitigate it', 'They should mitigated it'],
     correctAnswer: 'They might have mitigated it',
@@ -1723,13 +1721,13 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Dettato audio: Wh- Cleft Sentence',
     contextScenario: 'Documentary interview with aerospace propulsion innovator',
     dialogue: [
-      { speaker: 'Engineer', text: 'What motivated the team was the desire to explore deep space sustainably.' },
+      { speaker: 'Engineer', text: '_____ the desire to explore deep space sustainably.' },
     ],
-    prompt: 'Ascolta e trascrivi la struttura enfatica:',
+    prompt: 'Ascolta la clip audio e trascrivi la clausola enfatica iniziale (Wh- cleft clause + was):',
     type: 'cloze',
     correctAnswer: [
-      'What motivated the team was the desire to explore deep space sustainably.',
-      'What motivated the team was the desire to explore deep space sustainably',
+      'What motivated the team was',
+      'what motivated the team was',
     ],
     explanation: {
       rule: 'Wh- cleft sentence: "What motivated the team was...".',
@@ -1772,9 +1770,9 @@ export const BBC_EXERCISES: BBCExercise[] = [
     contextScenario: 'Radio debate on space exploration funding',
     dialogue: [
       { speaker: 'Host', text: 'Did the agency request a budget increase for military defense?' },
-      { speaker: 'Analyst', text: 'No, what they requested was funding for scientific climate observation.' },
+      { speaker: 'Analyst', text: 'No, _____.' },
     ],
-    prompt: 'Pronuncia la frase posizionando l\'accento enfatico su "scientific climate observation":',
+    prompt: 'Seleziona e pronuncia la frase con la corretta struttura enfatica (Wh- cleft sentence):',
     type: 'multiple-choice',
     options: ['what they requested was funding for scientific climate observation', 'what they request was funding for scientific climate observation', 'that they requested was funding for scientific climate observation', 'it was they requested funding for scientific climate observation'],
     correctAnswer: 'what they requested was funding for scientific climate observation',
@@ -1947,13 +1945,14 @@ export const BBC_EXERCISES: BBCExercise[] = [
     dialogue: [
       { speaker: 'Note', text: 'The payload is heavy. But we think the rocket can carry it.' },
     ],
-    prompt: 'Riscrivi unendo le due frasi in modo formale con "Nevertheless":',
-    type: 'sentence-transformation',
+    prompt: 'Collega le due frasi in modo formale inserendo l\'avverbio connettivo corretto: "The payload is heavy; _____, we believe the rocket can carry it."',
+    type: 'cloze',
     options: undefined,
     correctAnswer: [
-      'The payload is exceptionally heavy; nevertheless, the booster can accommodate it.',
-      'The payload is heavy; nevertheless, we believe the rocket can carry it.',
-      'The payload is heavy, nevertheless we believe the rocket can carry it.',
+      'nevertheless',
+      'Nevertheless',
+      'nonetheless',
+      'Nonetheless',
     ],
     explanation: {
       rule: '"Nevertheless" (nondimeno / ciononostante) è un avverbio connettivo formale che richiede punto e virgola o punto seguito da virgola.',
@@ -1970,13 +1969,13 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Dettato audio: Formal Discourse Marker',
     contextScenario: 'BBC Radio 4 analysis on international climate diplomacy',
     dialogue: [
-      { speaker: 'Analyst', text: 'Consequently, European aerospace consortia must align their regulatory frameworks.' },
+      { speaker: 'Analyst', text: '_____, European aerospace consortia must align their regulatory frameworks.' },
     ],
-    prompt: 'Ascolta e trascrivi il connettivo e la proposizione consecutiva:',
+    prompt: 'Ascolta la clip audio e inserisci il connettivo formale di conseguenza all\'inizio della frase:',
     type: 'cloze',
     correctAnswer: [
-      'Consequently, European aerospace consortia must align their regulatory frameworks.',
-      'Consequently European aerospace consortia must align their regulatory frameworks',
+      'Consequently',
+      'consequently',
     ],
     explanation: {
       rule: '"Consequently" (di conseguenza / perciò) introduce un risultato logico in contesti analitici e formali.',
@@ -1994,9 +1993,9 @@ export const BBC_EXERCISES: BBCExercise[] = [
     contextScenario: 'International aerospace roundtable: expressing polite disagreement',
     dialogue: [
       { speaker: 'Colleague', text: 'I believe we should abandon the lunar base timeline completely.' },
-      { speaker: 'Delegate', text: 'I understand your perspective; however, I respectfully beg to differ.' },
+      { speaker: 'Delegate', text: 'I understand your perspective; however, _____.' },
     ],
-    prompt: 'Pronuncia la formula diplomatica britannica per dissentire con eleganza:',
+    prompt: 'Completa la risposta del delegato con la formula diplomatica britannica per dissentire con eleganza:',
     type: 'multiple-choice',
     options: ['I respectfully beg to differ', 'I completely say you are wrong', 'I differ you respectfully', 'I beg differing you'],
     correctAnswer: 'I respectfully beg to differ',
@@ -2173,13 +2172,12 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Dettato audio: Phrasal Verb "Come down with"',
     contextScenario: 'Medical officer log entry before launch quarantine',
     dialogue: [
-      { speaker: 'Flight Surgeon', text: 'The backup pilot has come down with a sudden viral infection.' },
+      { speaker: 'Flight Surgeon', text: 'The backup pilot has _____ a sudden viral infection.' },
     ],
-    prompt: 'Ascolta e trascrivi il phrasal verb idiomatico:',
+    prompt: 'Ascolta la clip audio e inserisci il phrasal verb mancante (tre parole):',
     type: 'cloze',
     correctAnswer: [
-      'The backup pilot has come down with a sudden viral infection.',
-      'The backup pilot has come down with a sudden viral infection',
+      'come down with',
     ],
     explanation: {
       rule: '"To come down with something" significa ammalarsi o contrarre un\'infezione non grave (come influenza o raffreddore).',
@@ -2196,9 +2194,9 @@ export const BBC_EXERCISES: BBCExercise[] = [
     topic: 'Binomial Idiom: Pros and Cons / Weigh up',
     contextScenario: 'Boardroom discussion on nuclear thermal propulsion investment',
     dialogue: [
-      { speaker: 'Analyst', text: 'We must carefully weigh up the pros and cons before committing two billion pounds.' },
+      { speaker: 'Analyst', text: '_____ before committing two billion pounds.' },
     ],
-    prompt: 'Pronuncia il binomio idiomatico "pros and cons" con intonazione scorrevole:',
+    prompt: 'Completa l\'intervento dell\'analista con il binomio idiomatico corretto:',
     type: 'multiple-choice',
     options: ['We must carefully weigh up the pros and cons', 'We must weigh up the pro and contra', 'We must weight the advantages and disadvantage', 'We have to weigh the pro and contro'],
     correctAnswer: 'We must carefully weigh up the pros and cons',
@@ -2286,9 +2284,9 @@ export const BBC_EXERCISES: BBCExercise[] = [
     contextScenario: 'Informal crew banter over difficult simulator exam conditions',
     dialogue: [
       { speaker: 'Astronaut A', text: 'I am terrified about tomorrow\'s orbital docking re-test!' },
-      { speaker: 'Astronaut B', text: 'Do not worry, mate. We are all in the same boat.' },
+      { speaker: 'Astronaut B', text: 'Do not worry, mate. _____.' },
     ],
-    prompt: 'Pronuncia la frase idiomatica di solidarietà informale con ritmo naturale:',
+    prompt: 'Completa la risposta del compagno con la corretta espressione idiomatica di solidarietà:',
     type: 'multiple-choice',
     options: ['We are all in the same boat', 'We are all on the same ship', 'We are all in the same ship', 'We all sail in same boat'],
     correctAnswer: 'We are all in the same boat',

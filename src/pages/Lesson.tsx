@@ -25,7 +25,7 @@ import { getCompletedExerciseIds, markExerciseCompleted } from '../db/database'
 import { useProgress } from '../hooks/useProgress'
 import ProgressBar from '../components/ProgressBar'
 import GhostButton from '../components/GhostButton'
-import { playSuccessChime, playErrorHum } from '../utils/sfx'
+import { playSuccessChime, playErrorHum, playNavClick, playNavTab, playModalToggle } from '../utils/sfx'
 
 const LEVEL_LIST = ['A1', 'A2', 'B1', 'B2'] as const
 type LevelType = (typeof LEVEL_LIST)[number]
@@ -150,6 +150,7 @@ function ExerciseCard({ exercise, onVerified, answerState, onNext, isLast }: Exe
   // Handle multiple-choice answer
   const handleSelectOption = (idx: number) => {
     if (answerState !== 'idle') return
+    playNavClick()
     setSelectedOption(idx)
     const selectedText = exercise.options?.[idx] ?? ''
     const isCorrect = verifyAnswer(selectedText, exercise.correctAnswer)
@@ -227,7 +228,10 @@ function ExerciseCard({ exercise, onVerified, answerState, onNext, isLast }: Exe
 
         {/* Info button for Cambridge grammatical rationale */}
         <button
-          onClick={() => setShowInfo((prev) => !prev)}
+          onClick={() => {
+            playModalToggle(!showInfo)
+            setShowInfo((prev) => !prev)
+          }}
           className={`p-1.5 rounded-full border transition-all ${
             showInfo
               ? 'border-signal-ok text-signal-ok bg-signal-ok/10'
@@ -620,6 +624,7 @@ export default function Lesson() {
 
   // Handle moving to next exercise
   const handleNextExercise = useCallback(() => {
+    playNavClick()
     if (currentIndex + 1 < sessionQueue.length) {
       setCurrentIndex((prev) => prev + 1)
       setAnswerState('idle')
@@ -630,6 +635,7 @@ export default function Lesson() {
 
   // Switch to next CEFR level
   const handleNextLevel = () => {
+    playNavTab()
     const nextIdx = LEVEL_LIST.indexOf(selectedLevel) + 1
     if (nextIdx < LEVEL_LIST.length) {
       const nextLvl = LEVEL_LIST[nextIdx]
@@ -647,11 +653,13 @@ export default function Lesson() {
 
   // Replay current level for practice
   const handleRepeatForTraining = () => {
+    playNavClick()
     initSession(selectedLevel, selectedUnit, true)
   }
 
   // Switch level manually via tab selector
   const handleSelectLevelTab = (lvl: LevelType) => {
+    playNavTab()
     setSelectedLevel(lvl)
     setSelectedUnit(null)
     setSearchParams({ level: lvl })

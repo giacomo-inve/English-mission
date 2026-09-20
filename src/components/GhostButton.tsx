@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { playNavClick } from '../utils/sfx'
 
 interface GhostButtonProps {
   children: ReactNode
@@ -23,10 +24,16 @@ export default function GhostButton({
   disabled = false,
   size = 'md',
 }: GhostButtonProps) {
+  const handleClick = () => {
+    if (disabled) return
+    playNavClick()
+    onClick?.()
+  }
+
   return (
     <button
       type={type}
-      onClick={onClick}
+      onClick={handleClick}
       disabled={disabled}
       className={[
         'btn-ghost font-mono tracking-display',

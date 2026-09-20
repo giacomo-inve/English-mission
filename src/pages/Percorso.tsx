@@ -6,6 +6,7 @@ import { db, completeUnit } from '../db/database'
 import { useProgress } from '../hooks/useProgress'
 import AnimatedCounter from '../components/AnimatedCounter'
 import SectionGuideModal from '../components/SectionGuideModal'
+import { playUnitSelect, playModalToggle, playSuccessChime, playErrorHum } from '../utils/sfx'
 
 interface MissionUnit {
   id: string
@@ -106,10 +107,18 @@ const MISSIONS: LevelMission[] = [
     themeDesc: 'Manovra di inserimento translunare. Collegamento tra passato e presente col Present Perfect, conditionals e phrasal verbs professionali.',
     icon: Compass,
     units: [
-      { id: 'u-b1-1', title: '01 · Tempo & Durata', desc: 'Present Perfect vs Past Simple; for, since, yet, already, just.' },
-      { id: 'u-b1-2', title: '02 · Ipotesi & Probabilità', desc: 'Zero, First e Second Conditional; would + base form vs will.' },
-      { id: 'u-b1-3', title: '03 · Modali di Deduzione & Obbligo', desc: 'Must, have to, should, might, can\'t; divieto (mustn\'t) vs assenza obbligo (don\'t have to).' },
-      { id: 'u-b1-4', title: '04 · Passivo Base & Relative Clauses', desc: 'Present/Past Simple passive; defining & non-defining clauses (who, which, that, whose, where).' },
+      { id: 'u-b1-1', title: '01 · Tempo, Durata & Preposizioni', desc: 'Present Perfect vs Past Simple; for, since, yet, already, just.' },
+      { id: 'u-b1-2', title: '02 · Present Perfect Continuous & Durata', desc: 'Azioni continuate nel passato recente, verbi di stato vs dinamici.' },
+      { id: 'u-b1-3', title: '03 · Scenari Ipotetici & Second Conditional', desc: 'Scenari irreali, connettori if, unless, as long as e consigli formali.' },
+      { id: 'u-b1-4', title: '04 · Modali di Obbligo, Regole & Divieti', desc: 'Must, have to, should, mustn\'t e assenza di obbligo (don\'t have to).' },
+      { id: 'u-b1-5', title: '05 · Modali di Deduzione Logica & Possibilità', desc: 'Might, could, can\'t, must per ipotesi tecniche e analisi dati.' },
+      { id: 'u-b1-6', title: '06 · Forma Passiva nei Processi Tecnici', desc: 'Present e Past Simple passive per report operativi e manutenzione.' },
+      { id: 'u-b1-7', title: '07 · Relative Clauses: Defining & Non-defining', desc: 'Specificazione di personale e componenti (who, which, that, whose, where).' },
+      { id: 'u-b1-8', title: '08 · Narrative Tenses & Sequenze al Passato', desc: 'Past Continuous, Past Perfect e marcatori di tempo complessi.' },
+      { id: 'u-b1-9', title: '09 · Phrasal Verbs Operativi di Bordo', desc: 'Verbi frasali essenziali: call off, look into, carry out, give up.' },
+      { id: 'u-b1-10', title: '10 · Preposizioni Dipendenti & Gerundio', desc: 'Preposizioni fisse (congratulate on, prevent from, famous for) con -ing.' },
+      { id: 'u-b1-11', title: '11 · Collocazioni Professionali: Make vs Do', desc: 'Terminologia operativa: make decisions, do research, make progress.' },
+      { id: 'u-b1-12', title: '12 · Connettori Avversativi & Sintassi Formale', desc: 'Although, however, despite, in order to per report sintetici.' },
     ],
     unlockTest: [
       {
@@ -145,10 +154,18 @@ const MISSIONS: LevelMission[] = [
     themeDesc: 'Avvicinamento alla superficie marziana. Piena autonomia comunicativa, forma passiva avanzata, discorso indiretto e argomentazione accademica.',
     icon: Sparkles,
     units: [
-      { id: 'u-b2-1', title: '01 · Condizionali Complessi & Wishes', desc: 'Third Conditional, Mixed Conditionals, strutture con wish e if only.' },
-      { id: 'u-b2-2', title: '02 · Reported Speech & Reporting Verbs', desc: 'Verbi reggenti avanzati (admit doing, deny having done, convince, suggest that).' },
-      { id: 'u-b2-3', title: '03 · Forme Passive Avanzate & Causativi', desc: 'Modal passives (must have been done); causativo have/get something done.' },
-      { id: 'u-b2-4', title: '04 · Inversioni Formali & Discourse Markers', desc: 'Inversioni negative (rarely, under no circumstances); connettori whereas, furthermore.' },
+      { id: 'u-b2-1', title: '01 · Third Conditional & Rimpianti Operativi', desc: 'Ipotesi irreali nel passato (Had I known, would have prevented).' },
+      { id: 'u-b2-2', title: '02 · Mixed Conditionals & Conseguenze Attuali', desc: 'Condizioni passate con effetti nel presente e viceversa.' },
+      { id: 'u-b2-3', title: '03 · Strutture con Wish & If Only', desc: 'Desideri presenti irreali (wish + past) e rimpianti (wish + past perfect).' },
+      { id: 'u-b2-4', title: '04 · Past Modals: Deduzione & Speculazione', desc: 'Must have been, might have mitigated, couldn\'t have happened.' },
+      { id: 'u-b2-5', title: '05 · Reported Speech & Reporting Verbs Avanzati', desc: 'Verbi complessi: deny having done, convince, urge, admit to doing.' },
+      { id: 'u-b2-6', title: '06 · Passivo Avanzato, Modale & Causativi', desc: 'Modal passives (must have been restored) e causativo have/get done.' },
+      { id: 'u-b2-7', title: '07 · Cleft Sentences per Enfasi Oratoria', desc: 'It-clefts (It was the booster that...) e Wh-clefts (What motivated us was...).' },
+      { id: 'u-b2-8', title: '08 · Inversioni Negative & Stile Enfatizzante', desc: 'Seldom have we, rarely did they, not only... but also, under no circumstances.' },
+      { id: 'u-b2-9', title: '09 · Registro Formale & Discourse Markers', desc: 'Nevertheless, consequently, notwithstanding, furthermore, on the contrary.' },
+      { id: 'u-b2-10', title: '10 · Disaccordo Diplomatico & Negoziazione', desc: 'Respectfully beg to differ, formule attenuative e negoziazione internazionale.' },
+      { id: 'u-b2-11', title: '11 · Phrasal Verbs Avanzati & Polisemia', desc: 'Back down, come down with, bring about, put up with, rule out.' },
+      { id: 'u-b2-12', title: '12 · Idiomi Professionali & Binomial Chunks', desc: 'Weigh up pros and cons, in the same boat, raise the bar, touch base.' },
     ],
     unlockTest: [
       {
@@ -207,6 +224,7 @@ export default function Percorso() {
 
   // Open unlock/mastery test
   const startUnlockTest = (mission: LevelMission) => {
+    playModalToggle(true)
     setTestModalMission(mission)
     setTestQuestionIdx(0)
     setTestSelectedOption(null)
@@ -221,6 +239,9 @@ export default function Percorso() {
 
     const currQ = testModalMission.unlockTest[testQuestionIdx]
     const isCorrect = optionIdx === currQ.correctIndex
+    if (isCorrect) playSuccessChime()
+    else playErrorHum()
+
     const newAnswers = [...testAnswers, isCorrect]
     setTestAnswers(newAnswers)
 
@@ -240,6 +261,7 @@ export default function Percorso() {
   }
 
   const handleUnitClick = async (levelId: string, unitId: string) => {
+    playUnitSelect()
     await completeUnit(unitId)
     await loadProgress()
     navigate(`/lezione?level=${levelId}&unit=${unitId}`)
@@ -382,7 +404,10 @@ export default function Percorso() {
                 </h3>
               </div>
               <button
-                onClick={() => setTestModalMission(null)}
+                onClick={() => {
+                  playModalToggle(false)
+                  setTestModalMission(null)
+                }}
                 className="text-text-content/40 hover:text-text-display"
               >
                 <X size={20} />
@@ -450,7 +475,10 @@ export default function Percorso() {
                 )}
 
                 <button
-                  onClick={() => setTestModalMission(null)}
+                  onClick={() => {
+                    playModalToggle(false)
+                    setTestModalMission(null)
+                  }}
                   className="px-6 py-2.5 rounded-pill bg-text-display text-bg-primary font-mono text-xs font-semibold"
                 >
                   CHIUDI ESAME

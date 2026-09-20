@@ -107,4 +107,53 @@ assert(bbcInActionMentions >= 95, `"BBC in Action" must be consistently featured
 
 console.log('  ✅ Pedagogical Standards PASSED');
 
+// ── Test 5: Verify Zero Leaks in B1 and B2 exercises ──
+console.log('\n--- TEST 5: Zero Answer Leaks in B1 & B2 Exercises ---');
+const percorsoSource = fs.readFileSync('src/pages/Percorso.tsx', 'utf8');
+
+// Parse BBC exercises and check each for answer leaks in dialogue or prompt
+const exerciseRegex = /{\s*id:\s*['"](bbc-[^'"]+)['"],[\s\S]*?level:\s*['"]([^'"]+)['"],[\s\S]*?type:\s*['"]([^'"]+)['"],[\s\S]*?correctAnswer:\s*([^,\n]+|\[[\s\S]*?\]),/g;
+let leakCount = 0;
+let match;
+while ((match = exerciseRegex.exec(bbcSource)) !== null) {
+  const [fullChunk, id, level, type, ansRaw] = match;
+  let answers = [];
+  if (ansRaw.startsWith('[')) {
+    const arrMatches = ansRaw.match(/['"]([^'"]+)['"]/g) || [];
+    answers = arrMatches.map(s => s.replace(/['"]/g, '').trim());
+  } else {
+    answers = [ansRaw.replace(/['"]/g, '').trim()];
+  }
+
+  const dialogueMatch = fullChunk.match(/dialogue:\s*\[([\s\S]*?)\]/);
+  if (dialogueMatch) {
+    const dialogueContent = dialogueMatch[1];
+    for (const ans of answers) {
+      if (ans.length > 3) {
+        const regex = new RegExp('\\b' + ans.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        if (regex.test(dialogueContent)) {
+          console.error(`Leak detected in ${id} (${type}): answer "${ans}" found in dialogue!`);
+          leakCount++;
+        }
+      }
+    }
+  }
+}
+
+console.log(`Detected leaks in BBC exercises: ${leakCount}`);
+assert.strictEqual(leakCount, 0, `Expected 0 answer leaks in BBC exercises, found ${leakCount}`);
+console.log('  ✅ Zero Answer Leaks PASSED');
+
+// ── Test 6: Verify Tripled Missions in Percorso.tsx (12 B1 & 12 B2) ──
+console.log('\n--- TEST 6: Tripled Missions Volume (12 B1 & 12 B2 Units) ---');
+const b1Units = (percorsoSource.match(/id:\s*'u-b1-\d+'/g) || []).length;
+const b2Units = (percorsoSource.match(/id:\s*'u-b2-\d+'/g) || []).length;
+
+console.log(`B1 Mission units in Percorso: ${b1Units} (target: 12)`);
+console.log(`B2 Mission units in Percorso: ${b2Units} (target: 12)`);
+
+assert.strictEqual(b1Units, 12, `Expected 12 B1 mission units, found ${b1Units}`);
+assert.strictEqual(b2Units, 12, `Expected 12 B2 mission units, found ${b2Units}`);
+console.log('  ✅ Tripled Missions Volume (12 B1 & 12 B2) PASSED');
+
 console.log('\n🎉 ALL CURRICULUM AUDIT TESTS PASSED SUCCESSFULLY!\n');

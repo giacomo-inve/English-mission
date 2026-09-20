@@ -17,6 +17,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useProgress } from '../hooks/useProgress'
+import { playNavClick, playModalToggle } from '../utils/sfx'
 
 interface NavFlightItem {
   id: string
@@ -138,6 +139,7 @@ export default function Nav() {
         {/* Left: Logo 36px + Mission Control */}
         <NavLink
           to="/"
+          onClick={() => playNavClick()}
           className="flex items-center gap-3 hover:opacity-90 transition-opacity select-none"
         >
           <img
@@ -160,7 +162,10 @@ export default function Nav() {
 
         {/* Right: Hamburger button Android style */}
         <button
-          onClick={() => setDrawerOpen(true)}
+          onClick={() => {
+            playModalToggle(true)
+            setDrawerOpen(true)
+          }}
           aria-label="Apri menu navigazione"
           className="p-2 text-text-display hover:bg-bg-section rounded-md border border-border-subtle hover:border-text-display transition-colors flex items-center justify-center"
         >
@@ -175,7 +180,10 @@ export default function Nav() {
           'fixed inset-0 z-50 bg-black/70 backdrop-blur-sm transition-opacity duration-300',
           drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
         ].join(' ')}
-        onClick={() => setDrawerOpen(false)}
+        onClick={() => {
+          playModalToggle(false)
+          setDrawerOpen(false)
+        }}
         aria-hidden="true"
       />
 
@@ -209,7 +217,10 @@ export default function Nav() {
 
           {/* Close button (X) */}
           <button
-            onClick={() => setDrawerOpen(false)}
+            onClick={() => {
+              playModalToggle(false)
+              setDrawerOpen(false)
+            }}
             aria-label="Chiudi navigazione"
             className="p-1.5 rounded-sm text-text-content/50 hover:text-text-display hover:bg-bg-primary transition-colors border border-transparent hover:border-border-subtle"
           >
@@ -231,7 +242,10 @@ export default function Nav() {
               <NavLink
                 key={item.id}
                 to={item.to}
-                onClick={() => setDrawerOpen(false)}
+                onClick={() => {
+                  playNavClick()
+                  setDrawerOpen(false)
+                }}
                 className={[
                   'flex items-center gap-3.5 px-3.5 py-3 rounded transition-all duration-150 group',
                   isActive

@@ -2614,27 +2614,66 @@ export const BASE_EXERCISES: Exercise[] = [
 // Adapts BBC_EXERCISES into full Exercise entities
 // ─────────────────────────────────────────
 
-export const BBC_ADAPTED_EXERCISES: Exercise[] = BBC_EXERCISES.map((bbc) => ({
-  id: bbc.id,
-  level: bbc.level,
-  unit: bbc.unitTitle,
-  type: bbc.type,
-  title: `${bbc.topic.toUpperCase()}`,
-  instruction: bbc.prompt,
-  prompt:
-    bbc.dialogue && bbc.dialogue.length > 0
-      ? bbc.dialogue[bbc.dialogue.length - 1].text
-      : bbc.prompt,
-  options: bbc.options,
-  correctAnswer: bbc.correctAnswer,
-  explanation: bbc.explanation,
-  audioText: bbc.audioScript || bbc.prompt,
-  contextScenario: bbc.contextScenario,
-  dialogue: bbc.dialogue,
-  phoneticsFocus: bbc.phoneticsFocus,
-  topic: bbc.topic,
-  skill: bbc.skill,
-}))
+function getB1UnitId(bbc: BBCExercise): string {
+  const num = parseInt(bbc.id.replace('bbc-b1-', ''), 10)
+  if (num >= 101 && num <= 105) return 'u-b1-2'   // Present Perfect Continuous & Durata
+  if (num >= 106 && num <= 108) return 'u-b1-12'  // Despite & Connettori Avversativi
+  if (num >= 109 && num <= 110) return 'u-b1-11'  // Travel & Work Collocations
+  if (num >= 201 && num <= 205) return 'u-b1-4'   // Modali di Obbligo & Regole
+  if (num >= 206 && num <= 210) return 'u-b1-5'   // Modali di Deduzione Logica
+  if (num >= 301 && num <= 306) return 'u-b1-3'   // Scenari Ipotetici & Second Conditional
+  if (num >= 307 && num <= 310) return 'u-b1-9'   // Phrasal Verbs Operativi
+  if (num >= 401 && num <= 405) return 'u-b1-8'   // Narrative Tenses & Sequenze
+  if (num >= 406 && num <= 410) return 'u-b1-6'   // Forma Passiva Processi Tecnici
+  if (num >= 501 && num <= 504) return 'u-b1-11'  // Collocazioni Make vs Do
+  if (num >= 505 && num <= 507) return 'u-b1-10'  // Preposizioni Dipendenti & Gerundio
+  return 'u-b1-9'                                 // Phrasal Verbs & Comunicazioni
+}
+
+function getB2UnitId(bbc: BBCExercise): string {
+  const num = parseInt(bbc.id.replace('bbc-b2-', ''), 10)
+  if (num >= 101 && num <= 105) return 'u-b2-2'   // Mixed Conditionals
+  if (num >= 106 && num <= 110) return 'u-b2-8'   // Inversioni Negative
+  if (num >= 201 && num <= 205) return 'u-b2-4'   // Past Modals of Deduction
+  if (num >= 206 && num <= 210) return 'u-b2-3'   // Strutture con Wish & Regret
+  if (num >= 301 && num <= 305) return 'u-b2-7'   // Cleft Sentences
+  if (num >= 306 && num <= 310) return 'u-b2-5'   // Reporting Verbs Avanzati
+  if (num >= 401 && num <= 405) return 'u-b2-9'   // Registro Formale & Discourse Markers
+  if (num >= 406 && num <= 410) return 'u-b2-10'  // Disaccordo Diplomatico
+  if (num >= 501 && num <= 505) return 'u-b2-11'  // Phrasal Verbs Avanzati
+  return 'u-b2-12'                                // Idiomi & Binomial Chunks
+}
+
+export const BBC_ADAPTED_EXERCISES: Exercise[] = BBC_EXERCISES.map((bbc) => {
+  let mappedUnit = bbc.unitTitle
+  if (bbc.level === 'B1') {
+    mappedUnit = getB1UnitId(bbc)
+  } else if (bbc.level === 'B2') {
+    mappedUnit = getB2UnitId(bbc)
+  }
+
+  return {
+    id: bbc.id,
+    level: bbc.level,
+    unit: mappedUnit,
+    type: bbc.type,
+    title: `${bbc.topic.toUpperCase()}`,
+    instruction: bbc.prompt,
+    prompt:
+      bbc.dialogue && bbc.dialogue.length > 0
+        ? bbc.dialogue[bbc.dialogue.length - 1].text
+        : bbc.prompt,
+    options: bbc.options,
+    correctAnswer: bbc.correctAnswer,
+    explanation: bbc.explanation,
+    audioText: bbc.audioScript || bbc.prompt,
+    contextScenario: bbc.contextScenario,
+    dialogue: bbc.dialogue,
+    phoneticsFocus: bbc.phoneticsFocus,
+    topic: bbc.topic,
+    skill: bbc.skill,
+  }
+})
 
 export const EXERCISES: Exercise[] = [
   ...BASE_EXERCISES,
