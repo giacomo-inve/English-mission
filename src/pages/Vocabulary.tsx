@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from 'react'
-import { Volume2, ArrowLeft, ChevronRight, RotateCcw, Zap } from 'lucide-react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { Volume2, ArrowLeft, ChevronRight, RotateCcw, Zap, Package } from 'lucide-react'
 import { vocabCategories, type VocabCategory, type CategoryVocabItem } from '../db/seed'
 import { useProgress } from '../hooks/useProgress'
 import GhostButton from '../components/GhostButton'
 import AnimatedCounter from '../components/AnimatedCounter'
+import SectionGuideModal from '../components/SectionGuideModal'
 
 // ─────────────────────────────────────────
 // TTS
@@ -24,7 +25,7 @@ function speak(text: string) {
 
 interface QuizSlide {
   item: CategoryVocabItem
-  options: string[]   // 4 Italian translations
+  options: string[]
   correctIndex: number
 }
 
@@ -55,36 +56,35 @@ function CategoryCard({
   return (
     <button
       onClick={onClick}
-      className="group text-left transition-all duration-200"
-      style={{
-        background: '#0a0a0a',
-        border: '1px solid #3a3a3f',
-        borderRadius: '8px',
-        padding: '28px 24px',
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)')}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#3a3a3f')}
+      className="group text-left transition-all duration-200 bg-bg-section border border-border-subtle hover:border-text-display rounded-md p-6"
     >
-      {/* Emoji */}
-      <div className="text-3xl mb-4 select-none" aria-hidden="true">
-        {category.emoji}
+      {/* Emoji & level */}
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-3xl select-none" aria-hidden="true">
+          {category.emoji}
+        </span>
+        {category.level && (
+          <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-signal-ok/10 text-signal-ok border border-signal-ok/30">
+            {category.level}
+          </span>
+        )}
       </div>
 
       {/* Name */}
       <p
-        className="text-white font-mono font-bold tracking-widest mb-1"
-        style={{ fontSize: '0.7rem', letterSpacing: '0.22em' }}
+        className="text-text-display font-mono font-bold tracking-widest mb-1 text-xs"
+        style={{ letterSpacing: '0.2em' }}
       >
         {category.name}
       </p>
-      <p className="text-white/35 font-sans text-sm mb-4">{category.nameIT}</p>
+      <p className="text-text-content/60 font-sans text-sm mb-4">{category.nameIT}</p>
 
       {/* Count */}
       <p
-        className="font-mono text-white/20 tabular-nums"
-        style={{ fontSize: '0.65rem', letterSpacing: '0.16em' }}
+        className="font-mono text-text-content/40 tabular-nums text-xs"
+        style={{ letterSpacing: '0.14em' }}
       >
-        {category.items.length} PAROLE
+        {category.items.length} TERMINI ATTIVI
       </p>
 
       {/* Arrow */}
@@ -92,7 +92,7 @@ function CategoryCard({
         <ChevronRight
           size={16}
           strokeWidth={1.5}
-          className="text-white/15 group-hover:text-white/60 transition-colors"
+          className="text-text-content/20 group-hover:text-text-display transition-colors"
         />
       </div>
     </button>
@@ -108,73 +108,56 @@ function TermRow({ item }: { item: CategoryVocabItem }) {
 
   return (
     <div
-      className="py-5 border-b cursor-pointer group"
-      style={{ borderColor: '#3a3a3f' }}
+      className="py-5 border-b border-border-subtle cursor-pointer group"
       onClick={() => setExpanded((e) => !e)}
     >
-      {/* Top row: term + IPA + audio */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          {/* Part of speech */}
           <span
-            className="font-mono text-white/20 text-xs mb-1 inline-block"
+            className="font-mono text-text-content/40 text-xs mb-1 inline-block"
             style={{ letterSpacing: '0.14em' }}
           >
             {item.partOfSpeech.toUpperCase()}
           </span>
 
-          {/* Term */}
           <div className="flex items-center gap-3">
             <h3
               className="text-text-display font-sans"
-              style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', lineHeight: 1.1 }}
+              style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', lineHeight: 1.1 }}
             >
               {item.term}
             </h3>
             <button
               onClick={(e) => { e.stopPropagation(); speak(item.term) }}
-              className="text-white/20 hover:text-white/70 transition-colors shrink-0"
+              className="text-text-content/30 hover:text-text-display transition-colors shrink-0"
               aria-label={`Pronuncia ${item.term}`}
             >
               <Volume2 size={18} strokeWidth={1.5} />
             </button>
           </div>
 
-          {/* IPA */}
-          <p className="font-mono text-white/30 text-sm mt-0.5">{item.ipa}</p>
+          <p className="text-text-content/60 font-sans text-sm mt-1">{item.translation}</p>
         </div>
 
-        {/* Translation */}
-        <div className="text-right shrink-0">
-          <p className="text-text-content/65 font-sans text-base">{item.translation}</p>
-        </div>
+        <span className="font-mono text-xs text-text-content/40 shrink-0 self-center">
+          {item.ipa}
+        </span>
       </div>
 
-      {/* Example — shown on expand */}
-      <div
-        className="overflow-hidden transition-all duration-300"
-        style={{ maxHeight: expanded ? '80px' : '0', opacity: expanded ? 1 : 0 }}
-      >
-        <p className="text-text-content/35 text-sm italic mt-3 font-sans">
+      {expanded && (
+        <div className="mt-4 pt-4 border-t border-border-subtle/50 text-xs text-text-content/75 italic">
           "{item.example}"
-        </p>
-      </div>
-
-      {/* Expand hint */}
-      {!expanded && (
-        <p className="font-mono text-white/10 text-xs mt-2" style={{ letterSpacing: '0.1em' }}>
-          CLICCA PER ESEMPIO
-        </p>
+        </div>
       )}
     </div>
   )
 }
 
 // ─────────────────────────────────────────
-// Mini-quiz component
+// Mini Quiz View
 // ─────────────────────────────────────────
 
-function MiniQuiz({
+function CategoryQuizView({
   category,
   onClose,
 }: {
@@ -182,21 +165,20 @@ function MiniQuiz({
   onClose: () => void
 }) {
   const { addXP } = useProgress()
-  const [slides] = useState<QuizSlide[]>(() => buildQuiz(category))
+  const slides = useMemo(() => buildQuiz(category), [category])
   const [index, setIndex] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
   const [score, setScore] = useState(0)
-  const [xpEarned, setXpEarned] = useState(0)
   const [done, setDone] = useState(false)
+  const [xpEarned, setXpEarned] = useState(0)
 
   const current = slides[index]
-  const progress = Math.round((index / slides.length) * 100)
 
-  const handleSelect = useCallback(async (optionIdx: number) => {
-    if (selected !== null) return
-    setSelected(optionIdx)
+  const handleSelect = useCallback(async (optIdx: number) => {
+    if (selected !== null || !current) return
+    setSelected(optIdx)
 
-    const correct = optionIdx === current.correctIndex
+    const correct = optIdx === current.correctIndex
     if (correct) {
       setScore((s) => s + 1)
       setXpEarned((x) => x + 10)
@@ -213,34 +195,33 @@ function MiniQuiz({
     }, 900)
   }, [selected, current, index, slides.length, addXP])
 
-  // ── Done screen ──
   if (done) {
     const accuracy = Math.round((score / slides.length) * 100)
     return (
       <div className="py-16 flex flex-col items-center text-center">
-        <p className="font-mono text-white/25 text-xs mb-3" style={{ letterSpacing: '0.22em' }}>
-          QUIZ COMPLETATO · {category.name}
+        <p className="font-mono text-text-content/40 text-xs mb-3 tracking-widest">
+          VERIFICA CARICO COMPLETATA · {category.name}
         </p>
-        <h2 className="heading-display text-3xl mb-10">
-          {accuracy >= 80 ? 'OTTIMO RISULTATO' : accuracy >= 50 ? 'BUON LAVORO' : 'CONTINUA A ESERCITARTI'}
+        <h2 className="heading-display text-3xl mb-8 text-text-display">
+          {accuracy >= 80 ? 'CARICO CONVALIDATO' : 'VERIFICA PARZIALE'}
         </h2>
 
-        <div className="grid grid-cols-3 gap-4 mb-10 w-full max-w-sm">
+        <div className="grid grid-cols-3 gap-4 mb-8 w-full max-w-sm">
           <div className="data-tile text-center">
-            <p className="font-mono text-white/25 text-xs mb-1">CORRETTE</p>
-            <p className="font-mono text-white text-2xl tabular-nums">
+            <p className="font-mono text-text-content/40 text-xs mb-1">CORRETTE</p>
+            <p className="font-mono text-text-display text-2xl tabular-nums">
               <AnimatedCounter value={score} />/{slides.length}
             </p>
           </div>
           <div className="data-tile text-center">
-            <p className="font-mono text-white/25 text-xs mb-1">ACCURATEZZA</p>
-            <p className="font-mono text-white text-2xl tabular-nums">
+            <p className="font-mono text-text-content/40 text-xs mb-1">ACCURATEZZA</p>
+            <p className="font-mono text-text-display text-2xl tabular-nums">
               <AnimatedCounter value={accuracy} />%
             </p>
           </div>
           <div className="data-tile text-center">
-            <p className="font-mono text-xs mb-1" style={{ color: '#3DDC84', letterSpacing: '0.12em' }}>XP</p>
-            <p className="font-mono text-2xl tabular-nums" style={{ color: '#3DDC84' }}>
+            <p className="font-mono text-xs mb-1 text-signal-ok">XP</p>
+            <p className="font-mono text-2xl tabular-nums text-signal-ok">
               +<AnimatedCounter value={xpEarned} />
             </p>
           </div>
@@ -248,97 +229,56 @@ function MiniQuiz({
 
         <div className="flex gap-3">
           <GhostButton onClick={() => { setIndex(0); setSelected(null); setScore(0); setXpEarned(0); setDone(false) }}>
-            <RotateCcw size={13} /> RIPROVA
+            <RotateCcw size={13} /> RIPETI
           </GhostButton>
           <GhostButton onClick={onClose}>
-            <ArrowLeft size={13} /> CATALOGO
+            <ArrowLeft size={13} /> CARICO
           </GhostButton>
         </div>
       </div>
     )
   }
 
-  // ── Active quiz ──
   return (
     <div className="max-w-xl mx-auto py-8 px-4">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={onClose}
-          className="font-mono text-white/30 text-xs hover:text-white/70 transition-colors flex items-center gap-1.5"
+          className="font-mono text-text-content/50 text-xs hover:text-text-display flex items-center gap-1.5"
         >
           <ArrowLeft size={12} /> ESCI
         </button>
-        <span className="font-mono text-white/25 text-xs tabular-nums">
+        <span className="font-mono text-text-content/40 text-xs tabular-nums">
           {index + 1} / {slides.length}
         </span>
-        <span className="font-mono text-xs flex items-center gap-1" style={{ color: '#3DDC84' }}>
+        <span className="font-mono text-xs flex items-center gap-1 text-signal-ok">
           <Zap size={12} strokeWidth={1.5} />
           +<AnimatedCounter value={xpEarned} /> XP
         </span>
       </div>
 
-      {/* Progress bar */}
-      <div className="w-full h-px bg-border-subtle mb-8 overflow-hidden">
-        <div
-          className="h-full bg-white transition-all duration-500"
-          style={{ width: `${progress}%` }}
-        />
+      <div className="bg-bg-section border border-border-subtle rounded-md p-8 mb-6 text-center">
+        <p className="font-mono text-xs text-text-content/40 mb-2 uppercase">TRADUCI IN ITALIANO:</p>
+        <h3 className="heading-display text-3xl text-text-display mb-2">{current.item.term}</h3>
+        <p className="font-mono text-xs text-text-content/50">{current.item.ipa}</p>
       </div>
 
-      {/* Question */}
-      <div className="text-center mb-10">
-        <p className="font-mono text-white/20 text-xs mb-4" style={{ letterSpacing: '0.18em' }}>
-          COSA SIGNIFICA IN ITALIANO?
-        </p>
-
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <h2
-            className="text-text-display font-sans"
-            style={{ fontSize: 'clamp(2.5rem, 7vw, 3.5rem)', lineHeight: 1 }}
-          >
-            {current.item.term}
-          </h2>
-          <button
-            onClick={() => speak(current.item.term)}
-            className="text-white/20 hover:text-white/60 transition-colors"
-            aria-label={`Pronuncia ${current.item.term}`}
-          >
-            <Volume2 size={20} strokeWidth={1.5} />
-          </button>
-        </div>
-
-        <p className="font-mono text-white/25 text-sm">{current.item.ipa}</p>
-      </div>
-
-      {/* Options */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="space-y-3">
         {current.options.map((opt, i) => {
           const isSelected = selected === i
-          const isCorrect  = i === current.correctIndex
-          const answered   = selected !== null
-
-          let borderColor = '#3a3a3f'
-          let textColor   = 'rgba(240,240,250,0.7)'
-
-          if (answered) {
-            if (isCorrect)           { borderColor = '#3DDC84'; textColor = '#3DDC84' }
-            else if (isSelected)     { borderColor = '#FF5C5C'; textColor = '#FF5C5C' }
-            else                     { borderColor = '#3a3a3f'; textColor = 'rgba(240,240,250,0.2)' }
+          const isCorrect = i === current.correctIndex
+          let cls = 'border-border-subtle text-text-content hover:border-text-display'
+          if (selected !== null) {
+            if (isCorrect) cls = 'border-signal-ok text-signal-ok bg-signal-ok/10'
+            else if (isSelected) cls = 'border-signal-err text-signal-err bg-signal-err/10'
           }
 
           return (
             <button
               key={i}
               onClick={() => handleSelect(i)}
-              disabled={answered}
-              className="font-sans text-sm py-4 px-5 rounded-pill border transition-all duration-200 text-left"
-              style={{
-                borderColor,
-                color: textColor,
-                background: 'transparent',
-                cursor: answered ? 'default' : 'pointer',
-              }}
+              disabled={selected !== null}
+              className={`w-full text-left p-4 rounded border text-sm font-sans transition-all ${cls}`}
             >
               {opt}
             </button>
@@ -350,122 +290,136 @@ function MiniQuiz({
 }
 
 // ─────────────────────────────────────────
-// Detail view (single category)
+// Main Vocabulary Page
 // ─────────────────────────────────────────
 
-function CategoryDetail({
-  category,
-  onBack,
-}: {
-  category: VocabCategory
-  onBack: () => void
-}) {
+type FilterLevel = 'tutti' | 'A1' | 'A2' | 'B1' | 'B2'
+
+export default function Vocabulary() {
+  const { progress, updateSectionLevel } = useProgress()
+  const [levelFilter, setLevelFilter] = useState<FilterLevel>('tutti')
+  const [selectedCategory, setSelectedCategory] = useState<VocabCategory | null>(null)
   const [quizMode, setQuizMode] = useState(false)
 
-  if (quizMode) {
-    return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6">
-        <MiniQuiz category={category} onClose={() => setQuizMode(false)} />
-      </div>
-    )
+  // Sync initial level from Dexie
+  useEffect(() => {
+    if (progress?.vocab_level && ['A1', 'A2', 'B1', 'B2'].includes(progress.vocab_level)) {
+      setLevelFilter(progress.vocab_level as FilterLevel)
+    }
+  }, [progress?.vocab_level])
+
+  const handleLevelChange = async (lvl: FilterLevel) => {
+    setLevelFilter(lvl)
+    if (lvl !== 'tutti') {
+      await updateSectionLevel('vocab_level', lvl)
+    }
   }
 
-  return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-16">
-      {/* Breadcrumb */}
-      <div className="py-8">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 font-mono text-white/30 text-xs hover:text-white/70 transition-colors mb-6"
-          style={{ letterSpacing: '0.14em' }}
-        >
-          <ArrowLeft size={13} /> CATALOGO
-        </button>
+  const filteredCategories = useMemo(() => {
+    if (levelFilter === 'tutti') return vocabCategories
+    return vocabCategories.filter((c) => c.level === levelFilter || !c.level)
+  }, [levelFilter])
 
-        <div className="flex items-center gap-4 mb-2">
-          <span className="text-3xl select-none" aria-hidden="true">{category.emoji}</span>
-          <div>
-            <p className="font-mono text-white/25 text-xs" style={{ letterSpacing: '0.18em' }}>
-              {category.nameIT.toUpperCase()} · {category.items.length} PAROLE
-            </p>
-            <h1 className="heading-display text-3xl sm:text-4xl">{category.name}</h1>
+  return (
+    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col bg-bg-primary px-4 sm:px-6 py-10 max-w-6xl mx-auto">
+      {/* ── HEADER ── */}
+      <div className="border-b border-border-subtle pb-6 mb-8 flex items-start justify-between">
+        <div>
+          <p
+            className="font-mono text-text-content/40 text-xs tracking-widest mb-1"
+            style={{ letterSpacing: '0.22em' }}
+          >
+            PAYLOAD LESSICALE · CATALOGO TERMINOLOGICO
+          </p>
+          <h1 className="heading-display text-3xl sm:text-4xl text-text-display flex items-center gap-3">
+            <Package size={30} strokeWidth={1.5} className="text-signal-ok" /> CARICO
+          </h1>
+        </div>
+
+        <SectionGuideModal
+          sectionTitle="CARICO · GUIDA OPERATIVA"
+          sectionSubtitle="PAYLOAD LESSICALE PER CATEGORIE TEMATICHE"
+          objective="Espandere il vocabolario operativo in lingua inglese navigando per ambiti specifici, dai viaggi al lessico aerospaziale e corporate."
+          methodology={[
+            'Seleziona una categoria per visualizzare tutti i termini, pronunce IPA e frasi di esempio.',
+            'Tocca un termine per ascoltare la corretta pronuncia via audio di bordo.',
+            'Avvia la sessione quiz di categoria per testare la memorizzazione e incassare telemetria XP.',
+          ]}
+          controls={[
+            { name: 'FILTRO LIVELLO', desc: 'Isola le categorie pertinenti al livello prescelto (A1-B2).' },
+            { name: 'CARD CATEGORIA', desc: 'Apre il dettaglio dei termini inclusi nel payload.' },
+            { name: 'MODALITÀ VERIFICA', desc: 'Mini-quiz interattivo a risposta multipla per la categoria.' },
+          ]}
+        />
+      </div>
+
+      {/* ── LEVEL SELECTOR & STATUS BADGE ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-bg-section p-4 rounded border border-border-subtle">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-text-content/40 uppercase tracking-wider">
+            LIVELLO:
+          </span>
+          <div className="flex items-center gap-1.5">
+            {(['tutti', 'A1', 'A2', 'B1', 'B2'] as FilterLevel[]).map((lvl) => (
+              <button
+                key={lvl}
+                onClick={() => handleLevelChange(lvl)}
+                className={[
+                  'font-mono text-xs px-3 py-1 rounded transition-all duration-150 uppercase',
+                  levelFilter === lvl
+                    ? 'bg-text-display text-bg-primary font-bold shadow'
+                    : 'text-text-content/60 hover:text-text-display border border-border-subtle hover:border-text-display',
+                ].join(' ')}
+              >
+                {lvl}
+              </button>
+            ))}
           </div>
         </div>
 
-        <hr className="hr-subtle mt-4 mb-2" />
+        {/* High contrast status badge */}
+        <span className="font-mono text-xs px-3 py-1 rounded bg-signal-ok/15 text-signal-ok border border-signal-ok/40 font-bold tracking-wider">
+          STATUS: LIVELLO {levelFilter === 'tutti' ? 'COMPLETO (A1-B2)' : levelFilter}
+        </span>
       </div>
 
-      {/* CTA quiz — fixed to the top near header */}
-      <div className="mb-8">
-        <GhostButton size="lg" onClick={() => setQuizMode(true)}>
-          ALLENATI SU QUESTA CATEGORIA
-        </GhostButton>
-      </div>
+      {/* ── CONTENT (GRID / DETAIL / QUIZ) ── */}
+      {quizMode && selectedCategory ? (
+        <CategoryQuizView category={selectedCategory} onClose={() => setQuizMode(false)} />
+      ) : selectedCategory ? (
+        <div>
+          <div className="flex items-center justify-between border-b border-border-subtle pb-4 mb-6">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="font-mono text-xs text-text-content/60 hover:text-text-display flex items-center gap-2"
+            >
+              <ArrowLeft size={14} /> TORNA AL CARICO COMPLETO
+            </button>
+            <button
+              onClick={() => setQuizMode(true)}
+              className="px-4 py-2 rounded-pill bg-signal-ok text-black font-mono text-xs font-semibold"
+            >
+              AVVIA TEST CARICO (+XP)
+            </button>
+          </div>
 
-      {/* Terms */}
-      <div>
-        {category.items.map((item) => (
-          <TermRow key={item.id} item={item} />
-        ))}
-      </div>
-
-      {/* Bottom CTA repeat */}
-      <div className="mt-10 flex gap-3">
-        <GhostButton size="lg" onClick={() => setQuizMode(true)}>
-          ALLENATI SU QUESTA CATEGORIA
-        </GhostButton>
-        <GhostButton onClick={onBack}>
-          <ArrowLeft size={13} /> CATALOGO
-        </GhostButton>
-      </div>
+          <div className="divide-y divide-border-subtle">
+            {selectedCategory.items.map((item) => (
+              <TermRow key={item.id} item={item} />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredCategories.map((cat) => (
+            <CategoryCard
+              key={cat.id}
+              category={cat}
+              onClick={() => setSelectedCategory(cat)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
-}
-
-// ─────────────────────────────────────────
-// Grid view (all categories)
-// ─────────────────────────────────────────
-
-function CategoryGrid({ onSelect }: { onSelect: (cat: VocabCategory) => void }) {
-  const totalWords = useMemo(
-    () => vocabCategories.reduce((acc, c) => acc + c.items.length, 0),
-    [],
-  )
-
-  return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-16 pt-12">
-      {/* Header */}
-      <div className="mb-10">
-        <p className="font-mono text-white/25 text-xs mb-2" style={{ letterSpacing: '0.2em' }}>
-          VOCABOLARIO · {vocabCategories.length} CATEGORIE · {totalWords} PAROLE
-        </p>
-        <h1 className="heading-display text-3xl sm:text-4xl mb-4">VOCABOLARIO</h1>
-        <p className="text-text-content/40 text-sm max-w-md">
-          Seleziona una categoria per esplorare i termini, ascoltare la pronuncia e allenarti con il mini-quiz.
-        </p>
-        <hr className="hr-subtle mt-6" />
-      </div>
-
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {vocabCategories.map((cat) => (
-          <CategoryCard key={cat.id} category={cat} onClick={() => onSelect(cat)} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────
-// Main page
-// ─────────────────────────────────────────
-
-export default function Vocabulary() {
-  const [selected, setSelected] = useState<VocabCategory | null>(null)
-
-  if (selected) {
-    return <CategoryDetail category={selected} onBack={() => setSelected(null)} />
-  }
-
-  return <CategoryGrid onSelect={setSelected} />
 }

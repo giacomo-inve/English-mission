@@ -1,5 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
-import { db, type UserProgress, todayStr, offsetDay } from '../db/database'
+import {
+  db,
+  type UserProgress,
+  todayStr,
+  offsetDay,
+  setPilotName as dbSetPilotName,
+  setSectionLevel as dbSetSectionLevel,
+  markExerciseCompleted as dbMarkExerciseCompleted,
+  setFontSizePreference as dbSetFontSizePreference,
+} from '../db/database'
 
 // ─────────────────────────────────────────
 // Types
@@ -44,7 +53,29 @@ export function useProgress() {
     const todayEntry = entryMap.get(today)
     const todayXP = todayEntry?.xpEarned ?? 0
 
-    setProgress({ ...p, todayXP, sevenDayTicks })
+    // Fetch section levels
+    const sLevels = await db.section_levels.toArray()
+    const levelMap: Record<string, string> = {}
+    sLevels.forEach((sl) => {
+      levelMap[sl.section] = sl.level
+    })
+
+    // Fetch completed exercise ids
+    const comp = await db.completed_exercises.toArray()
+    const completedIds = comp.length > 0 ? comp.map((c) => c.id) : p.completed_exercise_ids ?? []
+
+    setProgress({
+      ...p,
+      pilotName: p.pilotName || localStorage.getItem('emc-pilot-name') || 'Commander Giacomo',
+      speaking_level: levelMap['speaking_level'] || p.speaking_level || 'A1',
+      listening_level: levelMap['listening_level'] || p.listening_level || 'A1',
+      writing_level: levelMap['writing_level'] || p.writing_level || 'A1',
+      vocab_level: levelMap['vocab_level'] || p.vocab_level || 'A1',
+      verbs_level: levelMap['verbs_level'] || p.verbs_level || 'A1',
+      completed_exercise_ids: completedIds,
+      todayXP,
+      sevenDayTicks,
+    })
     setLoading(false)
   }, [])
 
@@ -93,5 +124,38 @@ export function useProgress() {
     await load()
   }
 
-  return { progress, loading, addXP, reload: load }
+  // ── Pilot name updater ──────────────────────────────
+  async function updatePilotName(name: string): Promise<void> {
+    await dbSetPilotName(name)
+    await load()
+  }
+
+  // ── Section level updater ───────────────────────────
+  async function updateSectionLevel(section: string, level: string): Promise<void> {
+    await dbSetSectionLevel(section, level)
+    await load()
+  }
+
+  // ── Mark exercise completed ─────────────────────────
+  async function markCompleted(exerciseId: string, section = 'general'): Promise<void> {
+    await dbMarkExerciseCompleted(exerciseId, section)
+    await load()
+  }
+
+  // ── Set font size preference ────────────────────────
+  async function updateFontSize(size: 'standard' | 'large' | 'extra'): Promise<void> {
+    await dbSetFontSizePreference(size)
+    await load()
+  }
+
+  return {
+    progress,
+    loading,
+    addXP,
+    reload: load,
+    updatePilotName,
+    updateSectionLevel,
+    markCompleted,
+    updateFontSize,
+  }
 }

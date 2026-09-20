@@ -1,48 +1,23 @@
-import { useState, useMemo } from 'react'
-import { PenTool, Check, AlertTriangle, Zap, RotateCcw, Sparkles } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import {
+  PenTool,
+  Check,
+  AlertTriangle,
+  Zap,
+  RotateCcw,
+  Sparkles,
+  BookOpen,
+  CheckCircle2,
+} from 'lucide-react'
 import GhostButton from '../components/GhostButton'
 import { useProgress } from '../hooks/useProgress'
 import AnimatedCounter from '../components/AnimatedCounter'
+import SectionGuideModal from '../components/SectionGuideModal'
+import { WRITING_PROMPTS, type WritingPrompt } from '../db/seed'
+import { playSuccessChime, playErrorHum } from '../utils/sfx'
 
-interface WritingPrompt {
-  id: string
-  title: string
-  taskIT: string
-  minWords: number
-  maxWords: number
-  suggestedKeywords: string[]
-  exampleSentence: string
-}
-
-const PROMPTS: WritingPrompt[] = [
-  {
-    id: 'pr-routine',
-    title: 'DAILY ROUTINE',
-    taskIT: 'Descrivi la tua routine mattutina tipica in 50-80 parole. Racconta a che ora ti svegli, cosa fai per prima cosa, cosa mangi o bevi a colazione e come ti prepari per la giornata.',
-    minWords: 50,
-    maxWords: 80,
-    suggestedKeywords: ['wake up', 'morning', 'breakfast', 'coffee', 'shower', 'start', 'first'],
-    exampleSentence: 'Every morning I wake up early, drink a warm cup of coffee and get ready for work.',
-  },
-  {
-    id: 'pr-travel',
-    title: 'TRAVEL MEMORY',
-    taskIT: 'Descrivi un viaggio o una città che hai visitato in 50-80 parole. Spiega dove sei andato, quale mezzo di trasporto hai utilizzato e cosa ti ha colpito maggiormente dell\'esperienza.',
-    minWords: 50,
-    maxWords: 80,
-    suggestedKeywords: ['travel', 'visit', 'hotel', 'beautiful', 'city', 'trip', 'enjoy'],
-    exampleSentence: 'Last summer I traveled to London and visited several historic museums across the city.',
-  },
-  {
-    id: 'pr-tech',
-    title: 'TECH & WORK',
-    taskIT: 'Descrivi il tuo ambiente di lavoro o una tecnologia che utilizzi ogni giorno in 50-80 parole. Spiega perché è utile, come collabori con gli altri e quali strumenti preferisci.',
-    minWords: 50,
-    maxWords: 80,
-    suggestedKeywords: ['project', 'technology', 'team', 'software', 'learn', 'computer', 'work'],
-    exampleSentence: 'In our software development team we use modern technology to build fast web applications.',
-  },
-]
+const LEVEL_LIST = ['A1', 'A2', 'B1', 'B2'] as const
+type LevelType = (typeof LEVEL_LIST)[number]
 
 interface ValidationResult {
   score: number
@@ -57,15 +32,36 @@ interface ValidationResult {
 }
 
 export default function Writing() {
-  const { addXP } = useProgress()
+  const { progress, addXP, updateSectionLevel, markCompleted } = useProgress()
+  const [selectedLevel, setSelectedLevel] = useState<LevelType>('A1')
   const [selectedPromptIdx, setSelectedPromptIdx] = useState(0)
   const [text, setText] = useState('')
   const [result, setResult] = useState<ValidationResult | null>(null)
   const [submitted, setSubmitted] = useState(false)
 
-  const prompt = PROMPTS[selectedPromptIdx]
+  // Sync initial level from Dexie
+  useEffect(() => {
+    if (progress?.writing_level && LEVEL_LIST.includes(progress.writing_level as LevelType)) {
+      setSelectedLevel(progress.writing_level as LevelType)
+    }
+  }, [progress?.writing_level])
 
-  // Real-time word count calculation
+  // Filter prompts by level
+  const activePrompts = useMemo(() => {
+    const list = WRITING_PROMPTS.filter((p) => p.level === selectedLevel)
+    return list.length > 0 ? list : WRITING_PROMPTS
+  }, [selectedLevel])
+
+  const prompt = activePrompts[selectedPromptIdx] || activePrompts[0]
+
+  // Completed IDs set
+  const completedSet = useMemo(() => {
+    return new Set(progress?.completed_exercise_ids ?? [])
+  }, [progress?.completed_exercise_ids])
+
+  const isCurrentCompleted = completedSet.has(prompt?.id)
+
+  // Word count
   const wordCount = useMemo(() => {
     const trimmed = text.trim()
     if (!trimmed) return 0
@@ -74,12 +70,13 @@ export default function Writing() {
 
   // Real-time keyword check
   const activeKeywords = useMemo(() => {
+    if (!prompt) return []
     const lower = text.toLowerCase()
     return prompt.suggestedKeywords.map((kw) => ({
       keyword: kw,
       found: lower.includes(kw.toLowerCase()),
     }))
-  }, [text, prompt.suggestedKeywords])
+  }, [text, prompt])
 
   // Select prompt
   const handleSelectPrompt = (idx: number) => {
@@ -89,9 +86,29 @@ export default function Writing() {
     setSubmitted(false)
   }
 
+  // Switch level
+  const handleSelectLevel = async (lvl: LevelType) => {
+    setSelectedLevel(lvl)
+    await updateSectionLevel('writing_level', lvl)
+    handleSelectPrompt(0)
+  }
+
+  // Sequential next uncompleted
+  const handleNextSequential = () => {
+    if (activePrompts.length <= 1) return
+    for (let i = 1; i < activePrompts.length; i++) {
+      const targetIdx = (selectedPromptIdx + i) % activePrompts.length
+      if (!completedSet.has(activePrompts[targetIdx].id)) {
+        handleSelectPrompt(targetIdx)
+        return
+      }
+    }
+    handleSelectPrompt((selectedPromptIdx + 1) % activePrompts.length)
+  }
+
   // Heuristic validation
   const validateText = () => {
-    if (!text.trim()) return
+    if (!text.trim() || !prompt) return
 
     const lower = text.toLowerCase()
     const foundKeywords = prompt.suggestedKeywords.filter((kw) => lower.includes(kw.toLowerCase()))
@@ -101,13 +118,12 @@ export default function Writing() {
     let wordCountStatus: 'low' | 'optimal' | 'high' = 'optimal'
     if (wordCount < prompt.minWords) {
       wordCountStatus = 'low'
-    } else if (wordCount > prompt.maxWords + 10) {
+    } else if (wordCount > prompt.maxWords + 15) {
       wordCountStatus = 'high'
     } else {
       wordCountPassed = true
     }
 
-    // Capitalization & punctuation heuristics
     const sentences = text.split(/[.!?]+/).map((s) => s.trim()).filter(Boolean)
     const capitalizationPassed = sentences.every((s) => /^[A-Z]/.test(s))
     const punctuationPassed = /[.!?]$/.test(text.trim())
@@ -117,32 +133,34 @@ export default function Writing() {
 
     if (wordCountPassed) {
       score += 25
-      notes.push(`Conteggio parole ottimale (${wordCount} parole).`)
+      notes.push(`Lunghezza ottimale (${wordCount} parole tra ${prompt.minWords} e ${prompt.maxWords}).`)
     } else if (wordCountStatus === 'low') {
-      notes.push(`Testo troppo breve (${wordCount}/${prompt.minWords} parole richieste).`)
+      notes.push(`Traccia troppo concisa: ${wordCount}/${prompt.minWords} parole minime richieste.`)
     } else {
       score += 15
-      notes.push(`Testo leggermente sopra il limite massimo (${wordCount} parole).`)
+      notes.push(`Testo leggermente sopra il limite massimo (${wordCount}/${prompt.maxWords} parole).`)
     }
 
-    // Keyword score
-    const kwPercent = foundKeywords.length / prompt.suggestedKeywords.length
+    const kwPercent = foundKeywords.length / (prompt.suggestedKeywords.length || 1)
     score += Math.round(kwPercent * 20)
-    notes.push(`${foundKeywords.length} su ${prompt.suggestedKeywords.length} vocaboli suggeriti utilizzati.`)
+    notes.push(`${foundKeywords.length} su ${prompt.suggestedKeywords.length} parole chiave o connettivi impiegati.`)
 
     if (capitalizationPassed) score += 3
-    else notes.push('Alcune frasi non iniziano con la lettera maiuscola.')
+    else notes.push('Verifica le lettere maiuscole a inizio frase.')
 
     if (punctuationPassed) score += 2
-    else notes.push('Il testo non si conclude con un punto di chiusura.')
+    else notes.push('Assicurati di inserire un segno di punteggiatura a chiusura del testo.')
 
     score = Math.min(100, Math.max(10, score))
 
-    // Award XP
-    let xpGain = 0
-    if (score >= 60) {
-      xpGain = score >= 85 ? 30 : 20
-      addXP(xpGain)
+    let xp = 0
+    if (score >= 65 && !submitted) {
+      xp = score >= 85 ? 30 : 20
+      addXP(xp)
+      playSuccessChime()
+      markCompleted(prompt.id, 'writing')
+    } else if (score < 65) {
+      playErrorHum()
     }
 
     setResult({
@@ -154,210 +172,249 @@ export default function Writing() {
       capitalizationPassed,
       punctuationPassed,
       feedbackNotes: notes,
-      xpAwarded: xpGain,
+      xpAwarded: xp,
     })
     setSubmitted(true)
   }
 
+  const allCompletedInLevel = useMemo(() => {
+    return activePrompts.length > 0 && activePrompts.every((p) => completedSet.has(p.id))
+  }, [activePrompts, completedSet])
+
   return (
     <div className="min-h-[calc(100vh-3.5rem)] flex flex-col bg-bg-primary px-4 sm:px-6 py-10 max-w-4xl mx-auto">
       {/* ── HEADER ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-subtle pb-6 mb-8">
+      <div className="border-b border-border-subtle pb-6 mb-8 flex items-start justify-between">
         <div>
-          <p className="font-mono text-white/30 text-xs tracking-widest mb-1" style={{ letterSpacing: '0.22em' }}>
-            MODULO OPERATIVO · COMPOSIZIONE SCRITTA
+          <p
+            className="font-mono text-text-content/40 text-xs tracking-widest mb-1"
+            style={{ letterSpacing: '0.22em' }}
+          >
+            COMPOSIZIONE REPORT · REGISTRO DI MISSIONE
           </p>
-          <h1 className="heading-display text-3xl sm:text-4xl text-white">SCRITTURA</h1>
+          <h1 className="heading-display text-3xl sm:text-4xl text-text-display flex items-center gap-3">
+            <BookOpen size={30} strokeWidth={1.5} className="text-signal-ok" /> LOGBOOK
+          </h1>
         </div>
 
-        {/* Prompt Selector Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto">
-          {PROMPTS.map((p, idx) => (
-            <button
-              key={p.id}
-              onClick={() => handleSelectPrompt(idx)}
-              className={[
-                'font-mono text-xs px-3 py-1.5 rounded-pill border transition-all duration-150 shrink-0',
-                selectedPromptIdx === idx
-                  ? 'border-white text-black bg-white font-semibold'
-                  : 'border-border-subtle text-white/40 hover:border-white/40 hover:text-white',
-              ].join(' ')}
-              style={{ letterSpacing: '0.14em' }}
-            >
-              {p.title}
-            </button>
-          ))}
+        {/* Contextual Guide (i) */}
+        <SectionGuideModal
+          sectionTitle="LOGBOOK · GUIDA OPERATIVA"
+          sectionSubtitle="COMPOSIZIONE SCRITTA E VALIDAZIONE EURISTICA"
+          objective="Affilare le competenze di scrittura in lingua inglese (Writing), dalla narrazione di base alla redazione di report tecnici e comunicazioni corporate."
+          methodology={[
+            'Leggi attentamente la traccia in italiano e il target di parole minime/massime.',
+            'Integra le parole chiave e i connettivi logici suggeriti nel testo.',
+            'Cura la punteggiatura finale e le maiuscole ad ogni inizio frase.',
+            'Raggiungi uno score di almeno 65/100 per registrare la traccia come superata.',
+          ]}
+          controls={[
+            { name: 'CONTEGGIO PAROLE', desc: 'Monitoraggio dinamico della lunghezza con indicatore di target.' },
+            { name: 'CHIAVI DI VOCABOLARIO', desc: 'Badge interattivi che si illuminano all\'inclusione nel testo.' },
+            { name: 'SELETTORE LIVELLO', desc: 'Accesso libero a tutte le tracce A1, A2, B1 e B2.' },
+            { name: 'INVIA AL CONTROLLO', desc: 'Avvia l\'analisi euristica e registra i punti telemetria XP.' },
+          ]}
+        />
+      </div>
+
+      {/* ── LEVEL SELECTOR & STATUS BADGE ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-bg-section p-4 rounded border border-border-subtle">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-text-content/40 uppercase tracking-wider">
+            LIVELLO:
+          </span>
+          <div className="flex items-center gap-1.5">
+            {LEVEL_LIST.map((lvl) => (
+              <button
+                key={lvl}
+                onClick={() => handleSelectLevel(lvl)}
+                className={[
+                  'font-mono text-xs px-3 py-1 rounded transition-all duration-150',
+                  selectedLevel === lvl
+                    ? 'bg-text-display text-bg-primary font-bold shadow'
+                    : 'text-text-content/60 hover:text-text-display border border-border-subtle hover:border-text-display',
+                ].join(' ')}
+              >
+                {lvl}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* High contrast status badge */}
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-xs px-3 py-1 rounded bg-signal-ok/15 text-signal-ok border border-signal-ok/40 font-bold tracking-wider">
+            STATUS: LIVELLO {selectedLevel}
+          </span>
+          {isCurrentCompleted && (
+            <span className="font-mono text-xs text-signal-ok flex items-center gap-1">
+              <CheckCircle2 size={13} /> TRACCIA ARCHIVIATA
+            </span>
+          )}
         </div>
       </div>
 
-      {/* ── PROMPT INSTRUCTION CARD ── */}
-      <div
-        className="p-6 sm:p-8 rounded-sm border border-border-subtle mb-6"
-        style={{ background: '#0a0a0a' }}
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <span className="font-mono text-xs text-white/30 border border-border-subtle px-2.5 py-0.5 rounded-sm tracking-widest">
-            TRACCIA: {prompt.title}
-          </span>
-          <span className="font-mono text-xs text-white/30 tracking-widest tabular-nums">
-            OBIETTIVO: {prompt.minWords}–{prompt.maxWords} PAROLE
-          </span>
+      {allCompletedInLevel && (
+        <div className="mb-6 p-4 rounded bg-signal-ok/10 border border-signal-ok/30 flex items-center gap-3 text-signal-ok text-xs font-mono">
+          <Sparkles size={16} /> TUTTE LE TRACCE LOGBOOK DEL LIVELLO {selectedLevel} SUPERATE!
+        </div>
+      )}
+
+      {/* ── PROMPT STRIP ── */}
+      <div className="flex items-center justify-between gap-2 mb-6 overflow-x-auto pb-2">
+        <div className="flex items-center gap-2">
+          {activePrompts.map((p, idx) => {
+            const isCompleted = completedSet.has(p.id)
+            return (
+              <button
+                key={p.id}
+                onClick={() => handleSelectPrompt(idx)}
+                className={[
+                  'font-mono text-xs px-3 py-1.5 rounded border transition-all shrink-0 flex items-center gap-1.5',
+                  selectedPromptIdx === idx
+                    ? 'border-signal-ok text-signal-ok bg-signal-ok/10 font-bold'
+                    : 'border-border-subtle text-text-content/50 hover:border-text-display/50',
+                ].join(' ')}
+              >
+                {isCompleted && <Check size={11} className="text-signal-ok" />}
+                TRACCIA 0{idx + 1}
+              </button>
+            )
+          })}
         </div>
 
-        <p className="text-text-content font-sans text-sm sm:text-base leading-relaxed mb-6">
-          {prompt.taskIT}
+        <button
+          onClick={handleNextSequential}
+          className="font-mono text-xs px-3 py-1.5 rounded border border-border-subtle hover:border-text-display text-text-content/70 hover:text-text-display shrink-0 ml-2"
+        >
+          PROSSIMA NON COMPLETATA &rarr;
+        </button>
+      </div>
+
+      {/* ── PROMPT INSTRUCTIONS CARD ── */}
+      <div className="bg-bg-section border border-border-subtle rounded-md p-6 sm:p-8 mb-8 shadow-md">
+        <div className="flex items-center justify-between border-b border-border-subtle pb-4 mb-4">
+          <div>
+            <span className="font-mono text-[10px] text-text-content/40 tracking-widest uppercase">
+              LIVELLO {prompt?.level} · TRACCIA {selectedPromptIdx + 1}/{activePrompts.length}
+            </span>
+            <h2 className="heading-display text-xl text-text-display mt-0.5">
+              {prompt?.title}
+            </h2>
+          </div>
+          <div className="font-mono text-xs text-text-content/60 border border-border-subtle px-3 py-1 rounded">
+            TARGET: {prompt?.minWords}–{prompt?.maxWords} PAROLE
+          </div>
+        </div>
+
+        <p className="text-text-content/85 text-sm font-sans mb-6 leading-relaxed">
+          {prompt?.taskIT}
         </p>
 
-        {/* Suggested keywords */}
+        {/* Suggested keywords / connectors */}
         <div>
-          <p className="font-mono text-white/25 text-xs tracking-wider mb-2">
-            VOCABOLI CHIAVE SUGGERITI (INCLUDILI NEL TESTO):
+          <p className="font-mono text-[11px] text-text-content/40 tracking-wider uppercase mb-2">
+            PAROLE CHIAVE E CONNETTORI RACCOMANDATI:
           </p>
           <div className="flex flex-wrap gap-2">
-            {activeKeywords.map(({ keyword, found }) => (
+            {activeKeywords.map((kw, i) => (
               <span
-                key={keyword}
-                className="font-mono text-xs px-2.5 py-1 rounded-sm border transition-colors duration-200 flex items-center gap-1.5"
-                style={{
-                  borderColor: found ? '#3DDC84' : '#3a3a3f',
-                  color: found ? '#3DDC84' : 'rgba(240,240,250,0.3)',
-                  background: 'transparent',
-                }}
+                key={i}
+                className={[
+                  'font-mono text-xs px-2.5 py-1 rounded border transition-colors',
+                  kw.found
+                    ? 'border-signal-ok text-signal-ok bg-signal-ok/10 font-semibold'
+                    : 'border-border-subtle text-text-content/40',
+                ].join(' ')}
               >
-                {found && <Check size={11} strokeWidth={2.5} />}
-                {keyword}
+                {kw.found ? '✓ ' : ''}{kw.keyword}
               </span>
             ))}
           </div>
         </div>
+
+        {prompt?.exampleSentence && (
+          <p className="font-mono text-xs text-text-content/50 border-t border-border-subtle pt-4 mt-6 italic">
+            MODELLO SINTATTICO: "{prompt.exampleSentence}"
+          </p>
+        )}
       </div>
 
-      {/* ── TEXTAREA INPUT AREA ── */}
-      <div className="mb-6">
+      {/* ── EDITOR CARD ── */}
+      <div className="bg-bg-section border border-border-subtle rounded-md p-6 sm:p-8 mb-8 shadow-md">
+        <div className="flex items-center justify-between mb-3">
+          <p className="font-mono text-xs text-text-content/50 uppercase tracking-wider">
+            STESURA DIARIO DI BORDO IN INGLESE:
+          </p>
+          <span
+            className={[
+              'font-mono text-xs px-2.5 py-0.5 rounded font-bold',
+              wordCount >= (prompt?.minWords || 50) && wordCount <= (prompt?.maxWords || 80) + 15
+                ? 'text-signal-ok bg-signal-ok/10'
+                : 'text-text-content/50 bg-bg-primary',
+            ].join(' ')}
+          >
+            {wordCount} / {prompt?.minWords}–{prompt?.maxWords} PAROLE
+          </span>
+        </div>
+
         <textarea
+          rows={7}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Write your response here in natural English..."
-          rows={8}
-          className="w-full font-sans text-sm sm:text-base p-5 rounded border border-border-subtle focus:border-white/60 focus:outline-none transition-colors duration-150 leading-relaxed text-[#f0f0fa] placeholder:text-white/20"
-          style={{
-            background: '#0a0a0a',
-            borderRadius: '4px',
-            border: '1px solid #3a3a3f',
-          }}
+          placeholder="Begin drafting your mission logbook here..."
+          className="w-full bg-bg-primary border border-border-subtle rounded p-4 font-mono text-sm text-text-display outline-none focus:border-signal-ok transition-colors"
         />
 
-        {/* Real-time Status Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mt-3 px-1">
-          {/* Real-time word counter */}
-          <div className="flex items-center gap-2">
-            <span
-              className="font-mono text-xs tracking-widest tabular-nums"
-              style={{
-                color:
-                  wordCount >= prompt.minWords && wordCount <= prompt.maxWords
-                    ? '#3DDC84'
-                    : wordCount > prompt.maxWords
-                    ? '#FF5C5C'
-                    : 'rgba(255,255,255,0.3)',
-              }}
-            >
-              <AnimatedCounter value={wordCount} /> / {prompt.maxWords} PAROLE
-            </span>
-            {wordCount >= prompt.minWords && wordCount <= prompt.maxWords && (
-              <span className="font-mono text-xs text-signal-ok">✓ TARGET</span>
-            )}
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-3">
-            {text && (
-              <button
-                onClick={() => {
-                  setText('')
-                  setResult(null)
-                  setSubmitted(false)
-                }}
-                className="font-mono text-xs text-white/30 hover:text-white px-2 py-1 flex items-center gap-1"
-              >
-                <RotateCcw size={12} /> CANCELLA
-              </button>
-            )}
-            <GhostButton onClick={validateText} disabled={!text.trim()}>
-              <PenTool size={13} /> INVIA E VERIFICA
-            </GhostButton>
-          </div>
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={validateText}
+            disabled={!text.trim()}
+            className="px-6 py-2.5 rounded-pill bg-white text-black hover:bg-white/90 font-mono text-xs font-semibold tracking-wider transition-opacity shadow disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            INVIA AL CONTROLLO MISSIONE
+          </button>
         </div>
       </div>
 
-      {/* ── HEURISTIC EVALUATION RESULTS ── */}
-      {submitted && result && (
-        <div
-          className="p-6 sm:p-8 rounded-sm border border-border-subtle"
-          style={{ background: '#0a0a0a' }}
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border-subtle pb-4 mb-6">
+      {/* ── EVALUATION RESULT ── */}
+      {result && (
+        <div className="bg-bg-section border border-border-subtle rounded-md p-6 sm:p-8 shadow-lg">
+          <div className="flex items-center justify-between border-b border-border-subtle pb-4 mb-6">
             <div>
-              <p className="font-mono text-white/30 text-xs tracking-widest">
-                ESITO ANALISI EURISTICA MISSION CONTROL
+              <p className="font-mono text-xs text-text-content/40 uppercase">
+                VALUTAZIONE SINTATTICA ED EURISTICA
               </p>
-              <h3 className="heading-display text-xl sm:text-2xl mt-1 text-white">
-                PUNTEGGIO: <AnimatedCounter value={result.score} /> / 100
+              <h3 className="heading-display text-xl text-text-display">
+                PUNTEGGIO GENERALE: {result.score} / 100
               </h3>
             </div>
-
-            {result.xpAwarded > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 border border-signal-ok rounded-pill">
-                <Zap size={14} className="text-signal-ok" />
-                <span className="font-mono text-xs text-signal-ok tracking-wider">
-                  +{result.xpAwarded} XP ASSEGNATI
-                </span>
-              </div>
+            {result.score >= 65 ? (
+              <span className="font-mono text-xs px-3 py-1.5 rounded bg-signal-ok/20 text-signal-ok border border-signal-ok font-bold">
+                TRACCIA CONVALIDATA (+{result.xpAwarded || 20} XP)
+              </span>
+            ) : (
+              <span className="font-mono text-xs px-3 py-1.5 rounded bg-signal-err/20 text-signal-err border border-signal-err font-bold">
+                REVISIONE RICHIESTA (SOGLIA 65)
+              </span>
             )}
           </div>
 
-          {/* Feedback details grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <div className="data-tile">
-              <p className="font-mono text-white/30 text-xs tracking-wider">CONTEGGIO PAROLE</p>
-              <p
-                className="font-mono text-lg font-bold"
-                style={{ color: result.wordCountPassed ? '#3DDC84' : '#FF5C5C' }}
-              >
-                {wordCount} PAROLE {result.wordCountPassed ? '(CONFORME)' : '(NON CONFORME)'}
+          <div className="space-y-2 mb-6">
+            {result.feedbackNotes.map((note, idx) => (
+              <p key={idx} className="font-mono text-xs text-text-content/80 flex items-start gap-2">
+                <span className="text-signal-ok">▸</span> {note}
               </p>
-              <p className="text-text-content/40 text-xs mt-1">
-                Target traccia: {prompt.minWords}–{prompt.maxWords} parole.
-              </p>
-            </div>
-
-            <div className="data-tile">
-              <p className="font-mono text-white/30 text-xs tracking-wider">VOCABOLI CHIAVE</p>
-              <p className="font-mono text-lg font-bold text-white">
-                {result.foundKeywords.length} / {prompt.suggestedKeywords.length} RILEVATI
-              </p>
-              <p className="text-text-content/40 text-xs mt-1">
-                {result.foundKeywords.length >= 3
-                  ? 'Ottimo utilizzo dei termini richiesti.'
-                  : 'Consiglio: prova ad inserire più parole chiave suggerite.'}
-              </p>
-            </div>
+            ))}
           </div>
 
-          {/* Evaluation notes */}
-          <div>
-            <p className="font-mono text-white/25 text-xs tracking-wider mb-2">
-              NOTE DI FEEDBACK:
-            </p>
-            <ul className="space-y-1.5 font-sans text-xs text-text-content/60">
-              {result.feedbackNotes.map((note, idx) => (
-                <li key={idx} className="flex items-center gap-2">
-                  <span className="text-white/20">·</span>
-                  <span>{note}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {result.score >= 65 && (
+            <div className="flex justify-end">
+              <GhostButton size="md" onClick={handleNextSequential}>
+                PROSSIMA TRACCIA LOGBOOK &rarr;
+              </GhostButton>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -10,6 +10,7 @@ import GhostButton from '../components/GhostButton'
 import ProgressBar from '../components/ProgressBar'
 import AnimatedCounter from '../components/AnimatedCounter'
 import { type SRSItem } from '../db/database'
+import SectionGuideModal from '../components/SectionGuideModal'
 
 // ─────────────────────────────────────────
 // Helpers
@@ -447,13 +448,41 @@ export default function Review() {
   return (
     <div className="min-h-[calc(100vh-3.5rem)] flex flex-col bg-bg-primary">
 
-      {/* ── TOP: progress ── */}
-      <div className="px-6 pt-6 pb-3 space-y-2">
+      {/* ── TOP: Header & Guide ── */}
+      <div className="px-6 pt-6 pb-2 flex items-center justify-between border-b border-border-subtle">
+        <div>
+          <span className="font-mono text-xs text-text-content/40 tracking-widest uppercase">
+            SISTEMA DI RIPASSO SPAZIATO · LEITNER 5-BOX
+          </span>
+          <h1 className="heading-display text-xl text-text-display">
+            ORBITA SRS
+          </h1>
+        </div>
+
+        <SectionGuideModal
+          sectionTitle="ORBITA SRS · GUIDA OPERATIVA"
+          sectionSubtitle="SESSIONE SPACED REPETITION LEITNER"
+          objective="Consolidare vocaboli e verbi trasferendoli dalla memoria a breve termine a quella permanente a lungo termine attraverso intervalli temporali crescenti."
+          methodology={[
+            'Tocca la card o premi la barra spaziatrice per girarla e verificare la risposta.',
+            'Valuta la tua risposta in modo sincero: AGAIN (torna a Box 1), HARD, GOOD, EASY.',
+            'Più alto è il box (1-5), più lungo sarà l\'intervallo prima del prossimo ripasso.',
+          ]}
+          controls={[
+            { name: 'SPAZIO / CLICK', desc: 'Capovolge la flashcard a 360 gradi mostrando la traduzione.' },
+            { name: 'AGAIN (1)', desc: 'Nessun ricordo: l\'elemento ricomincia il ciclo dal Box 1.' },
+            { name: 'GOOD / EASY', desc: 'Ricordo accurato: avanza al box successivo con incremento XP.' },
+          ]}
+        />
+      </div>
+
+      {/* ── Progress bar ── */}
+      <div className="px-6 pt-4 pb-3 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-white/20 text-xs tabular-nums" style={{ letterSpacing: '0.14em' }}>
+          <span className="font-mono text-text-content/40 text-xs tabular-nums" style={{ letterSpacing: '0.14em' }}>
             {index + 1} / {queue.length}
           </span>
-          <span className="font-mono text-white/20 text-xs tabular-nums">
+          <span className="font-mono text-signal-ok text-xs tabular-nums">
             +{stats.xpGained} XP
           </span>
         </div>

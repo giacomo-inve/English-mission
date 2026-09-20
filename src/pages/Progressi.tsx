@@ -179,25 +179,53 @@ export default function Progressi() {
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)] flex flex-col bg-bg-primary px-4 sm:px-6 py-10 max-w-4xl mx-auto">
-      {/* ── HERO 80PX ESTIMATED LEVEL ── */}
+      {/* ── HERO PILOTA & LIVELLO ── */}
       <div className="border-b border-border-subtle pb-8 mb-10">
-        <p className="font-mono text-white/30 text-xs tracking-widest mb-2" style={{ letterSpacing: '0.24em' }}>
-          PROFILO OPERATIVO & TELEMETRIA DI MISSIONE
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div>
+            <p className="font-mono text-text-content/40 text-xs tracking-widest uppercase mb-1" style={{ letterSpacing: '0.24em' }}>
+              DOSSIER PILOTA · MISSION TELEMETRY
+            </p>
+            <h1 className="heading-display text-3xl sm:text-5xl text-text-display font-bold">
+              ASTRONAUTA
+            </h1>
+          </div>
+          <div className="px-4 py-2 rounded bg-bg-section border border-border-subtle text-left sm:text-right">
+            <span className="font-mono text-[10px] text-text-content/40 tracking-widest uppercase block">
+              PILOTA IN COMANDO
+            </span>
+            <span className="font-mono text-base font-bold text-signal-ok">
+              {progress?.pilotName || 'Commander Giacomo'}
+            </span>
+          </div>
+        </div>
 
-        {/* 80px Level Display */}
-        <h1
-          className="heading-display text-white font-bold leading-none mb-6"
-          style={{ fontSize: 'clamp(2.5rem, 8vw, 4.5rem)' }}
-        >
-          LIVELLO ATTUALE: {currentLevel}
-        </h1>
+        {/* Section Levels Independent Matrix */}
+        <div className="mb-6 p-4 rounded bg-bg-section border border-border-subtle">
+          <p className="font-mono text-[10px] text-text-content/40 uppercase tracking-wider mb-3">
+            LIVELLI INDIPENDENTI PER SEZIONE:
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            {[
+              { label: 'VOCAL LINK', val: progress?.speaking_level || 'A1' },
+              { label: 'COMUNICAZIONI', val: progress?.listening_level || 'A1' },
+              { label: 'LOGBOOK', val: progress?.writing_level || 'A1' },
+              { label: 'CARICO', val: progress?.vocab_level || 'A1' },
+              { label: 'PROPULSIONE', val: progress?.verbs_level || 'A1' },
+            ].map((sec) => (
+              <div key={sec.label} className="p-2.5 rounded bg-bg-primary border border-border-subtle/60 text-center">
+                <span className="font-mono text-[9px] text-text-content/40 block truncate">{sec.label}</span>
+                <span className="font-mono text-xs font-bold text-signal-ok mt-0.5 block">{sec.val}</span>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Key Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="data-tile">
-            <span className="font-mono text-white/30 text-xs tracking-wider">XP TOTALI</span>
-            <span className="font-mono text-white text-2xl tabular-nums">
+            <span className="font-mono text-text-content/40 text-xs tracking-wider">XP TOTALI</span>
+            <span className="font-mono text-text-display text-2xl tabular-nums">
               <AnimatedCounter value={totalXP} />
             </span>
           </div>

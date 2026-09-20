@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Volume2, Plus, Check, Search, X } from 'lucide-react'
+import { Volume2, Plus, Check, Search, X, Flame } from 'lucide-react'
 import { irregularVerbs, type IrregularPattern, type IrregularVerb } from '../db/seed'
 import { db } from '../db/database'
+import { useProgress } from '../hooks/useProgress'
+import SectionGuideModal from '../components/SectionGuideModal'
 
 // ─────────────────────────────────────────
 // Helpers
@@ -20,25 +22,6 @@ function speakForms(verb: IrregularVerb) {
   if (!('speechSynthesis' in window)) return
   window.speechSynthesis.cancel()
 
-  const forms = [verb.base, verb.past, verb.pastParticiple]
-  let i = 0
-
-  const sayNext = () => {
-    if (i >= forms.length) return
-    const utt = new SpeechSynthesisUtterance(forms[i])
-    utt.lang = 'en-GB'
-    utt.rate = 0.82
-    utt.onend = () => {
-      i++
-      setTimeout(sayNext, 350)
-    }
-    window.speechSynthesis.speak(utt)
-    i++
-    // Note: onend fires after utt ends, so we don't increment here
-  }
-
-  // Reset and queue
-  i = 0
   const sayOne = (form: string, onDone: () => void) => {
     const u = new SpeechSynthesisUtterance(form)
     u.lang = 'en-GB'
@@ -60,18 +43,14 @@ function speakForms(verb: IrregularVerb) {
 // ─────────────────────────────────────────
 
 type FilterPattern = IrregularPattern | 'tutti'
-type FilterLevel  = 'tutti' | 'A1' | 'A2' | 'B1'
+type FilterLevel = 'tutti' | 'A1' | 'A2' | 'B1' | 'B2'
 
 const PATTERN_META: Record<IrregularPattern, { desc: string; color: string; example: string }> = {
   AAA: { desc: 'Base = Past = Past Participle',         color: '#3DDC84', example: 'cut · cut · cut' },
   ABA: { desc: 'Base = Past Participle ≠ Past',         color: '#a78bfa', example: 'come · came · come' },
   ABB: { desc: 'Past = Past Participle ≠ Base',         color: '#64748b', example: 'buy · bought · bought' },
-  ABC: { desc: 'All three forms are different',         color: '#FF5C5C', example: 'go · went · gone' },
+  ABC: { desc: 'Tutte e tre le forme diverse',           color: '#FF5C5C', example: 'go · went · gone' },
 }
-
-// ─────────────────────────────────────────
-// Pattern badge
-// ─────────────────────────────────────────
 
 function PatternBadge({ pattern }: { pattern: IrregularPattern }) {
   const meta = PATTERN_META[pattern]
@@ -84,10 +63,6 @@ function PatternBadge({ pattern }: { pattern: IrregularPattern }) {
     </span>
   )
 }
-
-// ─────────────────────────────────────────
-// SRS row action
-// ─────────────────────────────────────────
 
 function SRSButton({ verbId, inQueue, onAdd }: { verbId: string; inQueue: boolean; onAdd: () => void }) {
   const [flash, setFlash] = useState(false)
@@ -117,7 +92,7 @@ function SRSButton({ verbId, inQueue, onAdd }: { verbId: string; inQueue: boolea
         'transition-all duration-150',
         flash
           ? 'border-signal-ok text-signal-ok'
-          : 'border-border-subtle text-white/40 hover:border-white/50 hover:text-white/80',
+          : 'border-border-subtle text-text-content/50 hover:border-text-display hover:text-text-display',
       ].join(' ')}
       style={{ letterSpacing: '0.12em' }}
     >
@@ -125,10 +100,6 @@ function SRSButton({ verbId, inQueue, onAdd }: { verbId: string; inQueue: boolea
     </button>
   )
 }
-
-// ─────────────────────────────────────────
-// Table row
-// ─────────────────────────────────────────
 
 function VerbRow({
   verb,
@@ -141,82 +112,121 @@ function VerbRow({
 }) {
   return (
     <tr
-      className="group border-b"
-      style={{ borderColor: '#3a3a3f', height: '56px' }}
+      className="border-b transition-colors hover:bg-bg-section/60"
+      style={{ borderColor: '#3a3a3f' }}
     >
-      {/* INFINITIVE */}
-      <td className="px-4 py-0">
+      {/* BASE */}
+      <td className="py-4 px-4 font-sans font-medium text-text-display">
         <div className="flex items-center gap-2">
-          <span className="text-text-display font-sans text-base">{verb.base}</span>
+          <span>{verb.base}</span>
           <button
-            onClick={() => speakForms(verb)}
-            className="text-white/20 hover:text-white/70 transition-colors shrink-0"
-            aria-label={`Pronuncia ${verb.base}, ${verb.past}, ${verb.pastParticiple}`}
-            title="Ascolta le tre forme"
+            onClick={() => speak(verb.base)}
+            className="text-text-content/30 hover:text-text-display transition-colors"
+            title="Pronuncia forma base"
           >
-            <Volume2 size={14} strokeWidth={1.5} />
+            <Volume2 size={14} />
           </button>
         </div>
       </td>
 
       {/* PAST SIMPLE */}
-      <td className="px-4 py-0">
-        <span className="text-text-content/75 font-sans text-sm">{verb.past}</span>
+      <td className="py-4 px-4 font-mono text-text-content/90 text-sm">
+        <div className="flex items-center gap-2">
+          <span>{verb.past}</span>
+          <button
+            onClick={() => speak(verb.past)}
+            className="text-text-content/30 hover:text-text-display transition-colors"
+            title="Pronuncia Past Simple"
+          >
+            <Volume2 size={14} />
+          </button>
+        </div>
       </td>
 
       {/* PAST PARTICIPLE */}
-      <td className="px-4 py-0">
-        <span className="text-text-content/75 font-sans text-sm">{verb.pastParticiple}</span>
+      <td className="py-4 px-4 font-mono text-text-content/90 text-sm">
+        <div className="flex items-center gap-2">
+          <span>{verb.pastParticiple}</span>
+          <button
+            onClick={() => speak(verb.pastParticiple)}
+            className="text-text-content/30 hover:text-text-display transition-colors"
+            title="Pronuncia Past Participle"
+          >
+            <Volume2 size={14} />
+          </button>
+        </div>
       </td>
 
       {/* TRADUZIONE */}
-      <td className="px-4 py-0 hidden md:table-cell">
-        <span className="text-white/40 text-sm">{verb.translation}</span>
-      </td>
-
-      {/* LIVELLO */}
-      <td className="px-4 py-0 hidden lg:table-cell">
-        <span className="font-mono text-white/25 text-xs">{verb.level}</span>
+      <td className="py-4 px-4 font-sans text-text-content/60 text-sm">
+        {verb.translation}
       </td>
 
       {/* PATTERN */}
-      <td className="px-4 py-0">
+      <td className="py-4 px-4">
         <PatternBadge pattern={verb.pattern} />
       </td>
 
-      {/* AZIONE */}
-      <td className="px-4 py-0">
-        <SRSButton
-          verbId={verb.id}
-          inQueue={inQueue}
-          onAdd={() => onAddToQueue(verb.id)}
-        />
+      {/* LIVELLO */}
+      <td className="py-4 px-4 font-mono text-xs text-text-content/40">
+        {verb.level}
+      </td>
+
+      {/* AZIONI: TUTTE LE FORME + SRS */}
+      <td className="py-4 px-4 text-right">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={() => speakForms(verb)}
+            className="font-mono text-xs px-2.5 py-1.5 rounded-sm border border-border-subtle hover:border-text-display text-text-content/60 hover:text-text-display transition-colors flex items-center gap-1"
+            title="Riproduci sequenza 3 forme"
+          >
+            <Volume2 size={12} /> 3 FORME
+          </button>
+          <SRSButton verbId={verb.id} inQueue={inQueue} onAdd={() => onAddToQueue(verb.id)} />
+        </div>
       </td>
     </tr>
   )
 }
 
-// ─────────────────────────────────────────
-// Main page
-// ─────────────────────────────────────────
-
 export default function Verbs() {
-  const [search, setSearch]       = useState('')
-  const [pattern, setPattern]     = useState<FilterPattern>('tutti')
-  const [level, setLevel]         = useState<FilterLevel>('tutti')
-  const [inQueue, setInQueue]     = useState<Set<string>>(new Set())
-  const [addedAll, setAddedAll]   = useState(false)
+  const { progress, updateSectionLevel } = useProgress()
+  const [patternFilter, setPatternFilter] = useState<FilterPattern>('tutti')
+  const [levelFilter, setLevelFilter] = useState<FilterLevel>('tutti')
+  const [search, setSearch] = useState('')
+  const [srsQueueIds, setSrsQueueIds] = useState<Set<string>>(new Set())
 
-  // Load existing SRS items for verbs
+  // Sync initial level from Dexie
   useEffect(() => {
-    db.srs_items.where('itemType').equals('verb').toArray().then((items) => {
-      setInQueue(new Set(items.map((i) => i.itemId)))
-    })
+    if (progress?.verbs_level && ['A1', 'A2', 'B1', 'B2'].includes(progress.verbs_level)) {
+      setLevelFilter(progress.verbs_level as FilterLevel)
+    }
+  }, [progress?.verbs_level])
+
+  // Load SRS queue to see what's already queued
+  useEffect(() => {
+    db.srs_items
+      .where('itemType')
+      .equals('verb')
+      .toArray()
+      .then((items) => {
+        setSrsQueueIds(new Set(items.map((i) => i.itemId)))
+      })
   }, [])
 
-  const addToQueue = useCallback(async (verbId: string) => {
-    if (inQueue.has(verbId)) return
-    const existing = await db.srs_items.where('itemId').equals(verbId).first()
+  const handleLevelChange = async (lvl: FilterLevel) => {
+    setLevelFilter(lvl)
+    if (lvl !== 'tutti') {
+      await updateSectionLevel('verbs_level', lvl)
+    }
+  }
+
+  // Add a verb to SRS table
+  const handleAddToQueue = useCallback(async (verbId: string) => {
+    const existing = await db.srs_items
+      .where('[itemId+itemType]')
+      .equals([verbId, 'verb'])
+      .first()
     if (!existing) {
       await db.srs_items.add({
         itemId: verbId,
@@ -227,233 +237,163 @@ export default function Verbs() {
         timesWrong: 0,
         lastReviewedAt: 0,
       })
-    } else if (existing.id != null) {
-      await db.srs_items.update(existing.id, { nextReviewAt: Date.now() })
+      setSrsQueueIds((prev) => new Set([...prev, verbId]))
     }
-    setInQueue((prev) => new Set([...prev, verbId]))
-  }, [inQueue])
+  }, [])
 
-  const addAllFiltered = useCallback(async () => {
-    for (const verb of filtered) {
-      await addToQueue(verb.id)
-    }
-    setAddedAll(true)
-    setTimeout(() => setAddedAll(false), 2000)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addToQueue, search, pattern, level])
-
-  // Filtered list
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim()
+  // Filter verbs
+  const filteredVerbs = useMemo(() => {
     return irregularVerbs.filter((v) => {
-      const matchesSearch = !q || [v.base, v.past, v.pastParticiple, v.translation].some((s) => s.toLowerCase().includes(q))
-      const matchesPattern = pattern === 'tutti' || v.pattern === pattern
-      const matchesLevel = level === 'tutti' || v.level === level
-      return matchesSearch && matchesPattern && matchesLevel
+      const matchPattern = patternFilter === 'tutti' || v.pattern === patternFilter
+      const matchLevel = levelFilter === 'tutti' || v.level === levelFilter
+      const matchSearch =
+        !search ||
+        v.base.toLowerCase().includes(search.toLowerCase()) ||
+        v.past.toLowerCase().includes(search.toLowerCase()) ||
+        v.pastParticiple.toLowerCase().includes(search.toLowerCase()) ||
+        v.translation.toLowerCase().includes(search.toLowerCase())
+      return matchPattern && matchLevel && matchSearch
     })
-  }, [search, pattern, level])
-
-  const PATTERNS: FilterPattern[] = ['tutti', 'AAA', 'ABA', 'ABB', 'ABC']
-  const LEVELS:   FilterLevel[]   = ['tutti', 'A1', 'A2', 'B1']
+  }, [patternFilter, levelFilter, search])
 
   return (
-    <div className="px-0 sm:px-0">
-
-      {/* ── STICKY TOP BAR ── */}
-      <div
-        className="sticky z-20 px-6 py-4 space-y-4"
-        style={{
-          top: '3.5rem',
-          background: 'rgba(0,0,0,0.96)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid #3a3a3f',
-        }}
-      >
-        {/* Title row */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-mono text-white/25 text-xs" style={{ letterSpacing: '0.2em' }}>
-              VERBI · A1–B1 · {filtered.length}/{irregularVerbs.length}
-            </p>
-            <h1 className="heading-display text-2xl sm:text-3xl">VERBI IRREGOLARI</h1>
-          </div>
-          <button
-            onClick={addAllFiltered}
-            className={[
-              'font-mono text-xs px-4 py-2 rounded-pill border transition-all duration-200 hidden sm:inline-flex items-center gap-2',
-              addedAll
-                ? 'border-signal-ok text-signal-ok'
-                : 'border-border-subtle text-white/40 hover:border-white/50 hover:text-white',
-            ].join(' ')}
-            style={{ letterSpacing: '0.12em' }}
+    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col bg-bg-primary px-4 sm:px-6 py-10 max-w-6xl mx-auto">
+      {/* ── HEADER ── */}
+      <div className="border-b border-border-subtle pb-6 mb-8 flex items-start justify-between">
+        <div>
+          <p
+            className="font-mono text-text-content/40 text-xs tracking-widest mb-1"
+            style={{ letterSpacing: '0.22em' }}
           >
-            {addedAll ? <><Check size={12} /> AGGIUNTI</> : <><Plus size={12} /> AGGIUNGI TUTTI</>}
-          </button>
+            SISTEMA DI PROPULSIONE LINGUISTICA · FORME VERBALI
+          </p>
+          <h1 className="heading-display text-3xl sm:text-4xl text-text-display flex items-center gap-3">
+            <Flame size={30} strokeWidth={1.5} className="text-signal-ok" /> PROPULSIONE
+          </h1>
         </div>
 
-        {/* Search */}
-        <div className="relative">
-          <Search
-            size={14}
-            strokeWidth={1.5}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 pointer-events-none"
-          />
+        <SectionGuideModal
+          sectionTitle="PROPULSIONE · GUIDA OPERATIVA"
+          sectionSubtitle="TABELLE FORME VERBALI E PATTERN FONETICI"
+          objective="Padroneggiare i verbi irregolari inglesi raggruppandoli per pattern fonetico (AAA, ABA, ABB, ABC) per una memorizzazione solida ed efficiente."
+          methodology={[
+            'Filtra per pattern fonetico: il cervello memorizza molto più facilmente gruppi di verbi con identico schema.',
+            'Usa il pulsante [3 FORME] per ascoltare in sequenza: Base, Past Simple, Past Participle.',
+            'Aggiungi i verbi più difficili alla coda ORBITA SRS per ripeterli a intervalli crescenti.',
+          ]}
+          controls={[
+            { name: 'FILTRO PATTERN', desc: 'Isola i verbi in base alla ripetizione delle forme (AAA, ABA, ABB, ABC).' },
+            { name: 'FILTRO LIVELLO', desc: 'Bypass diretto per livello formativo (A1, A2, B1, B2).' },
+            { name: '3 FORME AUDIO', desc: 'Riproduce automaticamente tutte e tre le forme in rapida successione.' },
+            { name: 'AGGIUNGI A SRS', desc: 'Invia il verbo all\'algoritmo di ripasso spaziato Leitner.' },
+          ]}
+        />
+      </div>
+
+      {/* ── LEVEL SELECTOR & STATUS BADGE ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-bg-section p-4 rounded border border-border-subtle">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-text-content/40 uppercase tracking-wider">
+            LIVELLO:
+          </span>
+          <div className="flex items-center gap-1.5">
+            {(['tutti', 'A1', 'A2', 'B1', 'B2'] as FilterLevel[]).map((lvl) => (
+              <button
+                key={lvl}
+                onClick={() => handleLevelChange(lvl)}
+                className={[
+                  'font-mono text-xs px-3 py-1 rounded transition-all duration-150 uppercase',
+                  levelFilter === lvl
+                    ? 'bg-text-display text-bg-primary font-bold shadow'
+                    : 'text-text-content/60 hover:text-text-display border border-border-subtle hover:border-text-display',
+                ].join(' ')}
+              >
+                {lvl}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* High contrast status badge */}
+        <span className="font-mono text-xs px-3 py-1 rounded bg-signal-ok/15 text-signal-ok border border-signal-ok/40 font-bold tracking-wider">
+          STATUS: LIVELLO {levelFilter === 'tutti' ? 'COMPLETO (A1-B2)' : levelFilter}
+        </span>
+      </div>
+
+      {/* ── FILTERS & SEARCH ── */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6">
+        {/* Pattern Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+          <span className="font-mono text-xs text-text-content/40 uppercase tracking-wider mr-1">
+            PATTERN:
+          </span>
+          {(['tutti', 'AAA', 'ABA', 'ABB', 'ABC'] as FilterPattern[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPatternFilter(p)}
+              className={[
+                'font-mono text-xs px-3 py-1 rounded border transition-all uppercase',
+                patternFilter === p
+                  ? 'border-text-display text-text-display bg-bg-section font-bold'
+                  : 'border-border-subtle text-text-content/40 hover:text-text-display',
+              ].join(' ')}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+
+        {/* Search input */}
+        <div className="relative w-full md:w-72">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-content/40" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cerca per infinito, passato, traduzione…"
-            className="w-full font-mono text-xs text-text-content placeholder:text-white/20"
-            style={{
-              background: 'transparent',
-              border: '1px solid #3a3a3f',
-              borderRadius: '4px',
-              padding: '8px 32px 8px 32px',
-              outline: 'none',
-              letterSpacing: '0.04em',
-            }}
-            onFocus={(e) => (e.target.style.borderColor = 'rgba(255,255,255,0.3)')}
-            onBlur={(e) => (e.target.style.borderColor = '#3a3a3f')}
+            placeholder="Cerca forma o traduzione..."
+            className="w-full bg-bg-section border border-border-subtle rounded px-9 py-2 text-xs font-mono text-text-display outline-none focus:border-text-display"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-content/40 hover:text-text-display"
             >
               <X size={12} />
             </button>
           )}
         </div>
-
-        {/* Pattern filters with descriptive label */}
-        <div className="flex flex-col gap-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className="font-mono text-white/35 text-xs tracking-wider shrink-0 mr-1"
-              style={{ letterSpacing: '0.14em' }}
-            >
-              PATTERN FONETICO:
-            </span>
-
-            {PATTERNS.map((p) => {
-              const meta = p !== 'tutti' ? PATTERN_META[p] : null
-              return (
-                <button
-                  key={p}
-                  onClick={() => setPattern(p)}
-                  className={[
-                    'font-mono text-xs px-3 py-1.5 rounded-pill border transition-all duration-150',
-                    pattern === p
-                      ? 'bg-white text-black border-white'
-                      : 'border-border-subtle text-white/40 hover:border-white/40 hover:text-white/70',
-                  ].join(' ')}
-                  style={{ letterSpacing: '0.12em' }}
-                  title={meta ? `${meta.desc} — es. ${meta.example}` : undefined}
-                >
-                  {p === 'tutti' ? 'TUTTI' : (
-                    <span>
-                      {p}
-                      <span className="hidden sm:inline text-white/40 font-normal ml-1.5">({meta?.example.split(' · ')[0]})</span>
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-
-            {/* Divider */}
-            <span className="border-l border-border-subtle mx-1 h-4" />
-
-            {/* Level filters */}
-            <span
-              className="font-mono text-white/35 text-xs tracking-wider shrink-0 mr-1 hidden sm:inline"
-              style={{ letterSpacing: '0.14em' }}
-            >
-              LIVELLO:
-            </span>
-            {LEVELS.map((l) => (
-              <button
-                key={l}
-                onClick={() => setLevel(l)}
-                className={[
-                  'font-mono text-xs px-3 py-1.5 rounded-pill border transition-all duration-150',
-                  level === l
-                    ? 'bg-white text-black border-white'
-                    : 'border-border-subtle text-white/40 hover:border-white/40 hover:text-white/70',
-                ].join(' ')}
-                style={{ letterSpacing: '0.12em' }}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
-
-          {/* Contextual Micro-guide inline hint */}
-          <div className="font-mono text-xs text-white/40 flex flex-wrap items-center gap-2 pt-1 border-t border-border-subtle/40">
-            <span className="text-signal-ok text-[11px] font-semibold tracking-wider">
-              GUIDA COGNITIVA:
-            </span>
-            {pattern === 'tutti' ? (
-              <span>
-                Studio per rima e pattern fonetico (AAA, ABA, ABB, ABC) per eliminare l'interferenza mnemonica delle liste alfabetiche.
-              </span>
-            ) : (
-              <span>
-                <strong className="text-white font-semibold">{pattern}:</strong> {PATTERN_META[pattern].desc} &nbsp;·&nbsp; Modello paradigmatico: <em>{PATTERN_META[pattern].example}</em>.
-              </span>
-            )}
-          </div>
-        </div>
       </div>
 
-      {/* ── TABLE ── */}
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          {/* Sticky headers */}
+      {/* ── VERBS TABLE ── */}
+      <div className="bg-bg-section border border-border-subtle rounded-md overflow-x-auto shadow-md">
+        <table className="w-full text-left border-collapse">
           <thead>
-            <tr style={{ background: '#000', borderBottom: '1px solid #3a3a3f' }}>
-              {[
-                { label: 'INFINITIVE',       cls: 'w-32 pl-4' },
-                { label: 'PAST SIMPLE',       cls: 'w-32 pl-4' },
-                { label: 'PAST PARTICIPLE',   cls: 'w-36 pl-4' },
-                { label: 'TRADUZIONE',        cls: 'w-40 pl-4 hidden md:table-cell' },
-                { label: 'LV.',              cls: 'w-12 pl-4 hidden lg:table-cell' },
-                { label: 'PAT.',             cls: 'w-16 pl-4' },
-                { label: 'AZIONE',           cls: 'pl-4 pr-6' },
-              ].map(({ label, cls }) => (
-                <th
-                  key={label}
-                  className={`py-3 text-left font-mono text-white/25 text-xs ${cls}`}
-                  style={{ letterSpacing: '0.14em' }}
-                >
-                  {label}
-                </th>
-              ))}
+            <tr className="border-b font-mono text-[11px] text-text-content/40 uppercase tracking-widest bg-bg-primary/50" style={{ borderColor: '#3a3a3f' }}>
+              <th className="py-3 px-4">BASE</th>
+              <th className="py-3 px-4">PAST SIMPLE</th>
+              <th className="py-3 px-4">PAST PARTICIPLE</th>
+              <th className="py-3 px-4">ITALIANO</th>
+              <th className="py-3 px-4">PATTERN</th>
+              <th className="py-3 px-4">LIVELLO</th>
+              <th className="py-3 px-4 text-right">TELEMETRIA AUDIO</th>
             </tr>
           </thead>
-
           <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-16 text-center">
-                  <p className="font-mono text-white/20 text-sm">Nessun verbo trovato per questa ricerca.</p>
-                </td>
-              </tr>
-            ) : (
-              filtered.map((verb) => (
-                <VerbRow
-                  key={verb.id}
-                  verb={verb}
-                  inQueue={inQueue.has(verb.id)}
-                  onAddToQueue={addToQueue}
-                />
-              ))
-            )}
+            {filteredVerbs.map((verb) => (
+              <VerbRow
+                key={verb.id}
+                verb={verb}
+                inQueue={srsQueueIds.has(verb.id)}
+                onAddToQueue={handleAddToQueue}
+              />
+            ))}
           </tbody>
         </table>
       </div>
 
-      {/* Bottom padding */}
-      <div className="h-16" />
+      <p className="font-mono text-xs text-text-content/40 mt-4 text-right">
+        {filteredVerbs.length} FORME VERBALI DISPONIBILI
+      </p>
     </div>
   )
 }

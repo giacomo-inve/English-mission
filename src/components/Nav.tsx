@@ -1,77 +1,123 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { Target, X, Headphones, Mic, PenTool, RefreshCw, Compass, Settings as SettingsIcon, BookMarked } from 'lucide-react'
+import {
+  Menu,
+  X,
+  Compass,
+  Rocket,
+  Flame,
+  Package,
+  Radio,
+  Mic,
+  BookOpen,
+  RotateCcw,
+  User,
+  Sliders,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react'
+import { useProgress } from '../hooks/useProgress'
 
-const PRIMARY_LINKS = [
-  { label: 'HOME', to: '/' },
-  { label: 'PERCORSO', to: '/percorso' },
-  { label: 'GRAMMATICA', to: '/grammatica' },
-  { label: 'VOCABOLI', to: '/vocaboli' },
-  { label: 'VERBI', to: '/verbi' },
-  { label: 'RIPASSO', to: '/ripasso' },
-  { label: 'MANUALE', to: '/manuale' },
-]
+interface NavFlightItem {
+  id: string
+  label: string
+  subtitle: string
+  to: string
+  icon: LucideIcon
+}
 
-const OVERLAY_ITEMS = [
+const FLIGHT_NAV_ITEMS: NavFlightItem[] = [
   {
-    label: 'ASCOLTO',
+    id: 'rotta',
+    label: 'ROTTA',
+    subtitle: 'Panoramica e stato giornaliero',
+    to: '/',
+    icon: Compass,
+  },
+  {
+    id: 'missioni',
+    label: 'MISSIONI',
+    subtitle: 'Albero delle tappe A1-B2',
+    to: '/percorso',
+    icon: Rocket,
+  },
+  {
+    id: 'propulsione',
+    label: 'PROPULSIONE',
+    subtitle: 'Tabelle forme verbali e pattern',
+    to: '/verbi',
+    icon: Flame,
+  },
+  {
+    id: 'carico',
+    label: 'CARICO',
+    subtitle: 'Payload lessicale per categorie',
+    to: '/vocaboli',
+    icon: Package,
+  },
+  {
+    id: 'comunicazioni',
+    label: 'COMUNICAZIONI',
+    subtitle: 'Segnali audio e trascrizione',
     to: '/ascolto',
-    desc: 'Comprensione uditiva, waveform e dettato',
-    icon: <Headphones size={20} strokeWidth={1.5} />,
+    icon: Radio,
   },
   {
-    label: 'PARLATO',
+    id: 'vocal-link',
+    label: 'VOCAL LINK',
+    subtitle: 'Verifica pronuncia e dialoghi',
     to: '/parlato',
-    desc: 'Pronuncia vocale e riconoscimento in tempo reale',
-    icon: <Mic size={20} strokeWidth={1.5} />,
+    icon: Mic,
   },
   {
-    label: 'SCRITTURA',
+    id: 'logbook',
+    label: 'LOGBOOK',
+    subtitle: 'Diario di bordo e composizione',
     to: '/scrittura',
-    desc: 'Composizione su traccia e validazione euristica',
-    icon: <PenTool size={20} strokeWidth={1.5} />,
+    icon: BookOpen,
   },
   {
-    label: 'RIPASSO',
+    id: 'orbita-srs',
+    label: 'ORBITA SRS',
+    subtitle: 'Sessioni Leitner',
     to: '/ripasso',
-    desc: 'Flashcard 3D e Spaced Repetition Leitner',
-    icon: <RefreshCw size={20} strokeWidth={1.5} />,
+    icon: RotateCcw,
   },
   {
-    label: 'PROGRESSI',
+    id: 'astronauta',
+    label: 'ASTRONAUTA',
+    subtitle: 'Dati pilota e statistiche',
     to: '/progressi',
-    desc: 'Tracciamento livelli, telemetria e distintivi di missione',
-    icon: <Compass size={20} strokeWidth={1.5} />,
+    icon: User,
   },
   {
-    label: 'MANUALE',
-    to: '/manuale',
-    desc: 'Flight Manual e protocollo metodologico 10 min/giorno',
-    icon: <BookMarked size={20} strokeWidth={1.5} />,
-  },
-  {
-    label: 'IMPOSTAZIONI',
+    id: 'controlli',
+    label: 'CONTROLLI',
+    subtitle: 'Impostazioni di bordo',
     to: '/impostazioni',
-    desc: 'Preferenze di sintesi vocale e obiettivi giornalieri',
-    icon: <SettingsIcon size={20} strokeWidth={1.5} />,
+    icon: Sliders,
   },
 ]
 
 export default function Nav() {
-  const [overlayOpen, setOverlayOpen] = useState(false)
-  const navigate = useNavigate()
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const { progress } = useProgress()
   const location = useLocation()
+  const navigate = useNavigate()
 
-  // Close overlay on route change or ESC
+  const pilotName = progress?.pilotName || 'Commander Giacomo'
+
+  // Close drawer on route change
   useEffect(() => {
-    setOverlayOpen(false)
+    setDrawerOpen(false)
   }, [location.pathname])
 
+  // Manage body scroll & ESC key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOverlayOpen(false)
+      if (e.key === 'Escape') setDrawerOpen(false)
     }
-    if (overlayOpen) {
+    if (drawerOpen) {
       document.body.style.overflow = 'hidden'
       window.addEventListener('keydown', handleKeyDown)
     } else {
@@ -81,143 +127,162 @@ export default function Nav() {
       document.body.style.overflow = 'unset'
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [overlayOpen])
-
-  const handleSelect = (to: string) => {
-    setOverlayOpen(false)
-    navigate(to)
-  }
+  }, [drawerOpen])
 
   return (
     <>
-      <nav
-        className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center px-6 gap-6 justify-between"
-        style={{
-          borderBottom: '1px solid #3a3a3f',
-          background: 'rgba(0,0,0,0.94)',
-          backdropFilter: 'blur(10px)',
-        }}
+      {/* ── TOP BAR (ALTEZZA 56px / 3.5rem) ── */}
+      <header
+        className="fixed top-0 left-0 right-0 z-40 h-14 px-4 sm:px-6 flex items-center justify-between border-b border-border-subtle bg-bg-primary/95 backdrop-blur-md transition-colors"
       >
-        {/* Logo mark */}
-        <NavLink to="/" className="flex items-center gap-2 shrink-0">
-          <Target size={16} className="text-white" strokeWidth={1.5} />
-          <span
-            className="text-white font-mono text-xs"
-            style={{ letterSpacing: '0.22em' }}
-          >
-            EMC
-          </span>
-        </NavLink>
-
-        {/* Primary Links */}
-        <div className="flex items-center gap-5 sm:gap-6 overflow-x-auto">
-          {PRIMARY_LINKS.map(({ label, to }) => (
-            <NavLink
-              key={label}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                [
-                  'text-xs font-mono shrink-0 transition-colors duration-150',
-                  isActive
-                    ? 'text-white'
-                    : 'text-white/35 hover:text-white/75',
-                ].join(' ')
-              }
+        {/* Left: Logo 36px + Mission Control */}
+        <NavLink
+          to="/"
+          className="flex items-center gap-3 hover:opacity-90 transition-opacity select-none"
+        >
+          <img
+            src="./logo.png"
+            alt="Mission Control Logo"
+            className="h-9 w-auto max-w-[42px] object-contain rounded-full shadow-sm"
+          />
+          <div className="flex flex-col">
+            <span
+              className="text-text-display font-mono text-sm sm:text-base font-bold tracking-widest leading-none"
               style={{ letterSpacing: '0.18em' }}
             >
-              {label}
-            </NavLink>
-          ))}
+              MISSION CONTROL
+            </span>
+            <span className="font-mono text-[9px] text-text-content/40 tracking-wider hidden xs:inline">
+              SPA FLIGHT PROTOCOL V4
+            </span>
+          </div>
+        </NavLink>
 
-          {/* ALTRO button */}
-          <button
-            onClick={() => setOverlayOpen(true)}
-            className={[
-              'text-xs font-mono shrink-0 px-3 py-1 rounded-pill border transition-all duration-150',
-              overlayOpen
-                ? 'border-white text-black bg-white'
-                : 'border-border-subtle text-white/50 hover:border-white/50 hover:text-white',
-            ].join(' ')}
-            style={{ letterSpacing: '0.18em' }}
-          >
-            ALTRO
-          </button>
-        </div>
-      </nav>
-
-      {/* ── FULL SCREEN OVERLAY "ALTRO" ── */}
-      {overlayOpen && (
-        <div
-          className="fixed inset-0 z-[100] flex flex-col justify-between p-6 sm:p-12 overflow-y-auto"
-          style={{ background: '#000000' }}
+        {/* Right: Hamburger button Android style */}
+        <button
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Apri menu navigazione"
+          className="p-2 text-text-display hover:bg-bg-section rounded-md border border-border-subtle hover:border-text-display transition-colors flex items-center justify-center"
         >
-          {/* Top Bar inside Overlay */}
-          <div className="flex items-center justify-between border-b border-border-subtle pb-6">
-            <div className="flex items-center gap-3">
-              <Target size={20} className="text-white" strokeWidth={1.5} />
-              <span
-                className="text-white font-mono text-xs tracking-widest"
-                style={{ letterSpacing: '0.24em' }}
-              >
-                MISSION CONTROL · MODULI AVANZATI
+          <Menu size={22} strokeWidth={2} />
+        </button>
+      </header>
+
+      {/* ── ANDROID NAVIGATION DRAWER ── */}
+      {/* Backdrop */}
+      <div
+        className={[
+          'fixed inset-0 z-50 bg-black/70 backdrop-blur-sm transition-opacity duration-300',
+          drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+        ].join(' ')}
+        onClick={() => setDrawerOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* Drawer Panel (Slide-in a tutta altezza da destra) */}
+      <aside
+        className={[
+          'fixed top-0 right-0 bottom-0 z-50 w-[88vw] max-w-sm bg-bg-section border-l border-border-subtle shadow-2xl flex flex-col',
+          'transform transition-transform duration-300 ease-in-out',
+          drawerOpen ? 'translate-x-0' : 'translate-x-full',
+        ].join(' ')}
+        aria-label="Menu navigazione di bordo"
+      >
+        {/* Drawer Header: Pilota in comando + pulsante chiusura (X) */}
+        <div className="p-5 border-b border-border-subtle bg-bg-primary/50 flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full border border-signal-ok/40 bg-signal-ok/10 flex items-center justify-center text-signal-ok font-mono font-bold text-sm">
+              <User size={18} />
+            </div>
+            <div>
+              <p className="font-mono text-[10px] text-text-content/40 uppercase tracking-widest flex items-center gap-1">
+                <ShieldCheck size={11} className="text-signal-ok" /> PILOTA IN COMANDO
+              </p>
+              <h2 className="font-mono text-sm sm:text-base font-bold text-text-display truncate max-w-[190px]">
+                {pilotName}
+              </h2>
+              <span className="inline-block mt-0.5 font-mono text-[9px] px-1.5 py-0.5 rounded bg-signal-ok/15 text-signal-ok border border-signal-ok/30 tracking-wider">
+                LIVELLI SBLOCCATI · A1-B2
               </span>
             </div>
-            <button
-              onClick={() => setOverlayOpen(false)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-pill border border-border-subtle hover:border-white text-white/60 hover:text-white font-mono text-xs tracking-wider transition-colors duration-150"
-            >
-              <X size={14} /> CHIUDI (ESC)
-            </button>
           </div>
 
-          {/* Grid of Menu items */}
-          <div className="max-w-4xl mx-auto w-full py-12">
-            <p
-              className="font-mono text-white/20 text-xs tracking-widest mb-8"
-              style={{ letterSpacing: '0.22em' }}
-            >
-              SELEZIONA MODULO OPERATIVO
-            </p>
+          {/* Close button (X) */}
+          <button
+            onClick={() => setDrawerOpen(false)}
+            aria-label="Chiudi navigazione"
+            className="p-1.5 rounded-sm text-text-content/50 hover:text-text-display hover:bg-bg-primary transition-colors border border-transparent hover:border-border-subtle"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {OVERLAY_ITEMS.map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => handleSelect(item.to)}
-                  className="group text-left p-6 rounded-sm border border-border-subtle hover:border-white transition-all duration-200"
-                  style={{ background: '#0a0a0a' }}
+        {/* Drawer Navigation List */}
+        <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
+          <p className="px-3 py-1 font-mono text-[10px] text-text-content/30 tracking-widest uppercase">
+            SISTEMI DI VOLO E MODULI
+          </p>
+
+          {FLIGHT_NAV_ITEMS.map((item) => {
+            const Icon = item.icon
+            const isActive = location.pathname === item.to
+
+            return (
+              <NavLink
+                key={item.id}
+                to={item.to}
+                onClick={() => setDrawerOpen(false)}
+                className={[
+                  'flex items-center gap-3.5 px-3.5 py-3 rounded transition-all duration-150 group',
+                  isActive
+                    ? 'bg-text-display text-bg-primary font-semibold shadow-sm'
+                    : 'text-text-content/80 hover:text-text-display hover:bg-bg-primary/60',
+                ].join(' ')}
+              >
+                <div
+                  className={[
+                    'p-1.5 rounded shrink-0 transition-colors',
+                    isActive ? 'bg-bg-primary text-text-display' : 'text-text-content/60 group-hover:text-text-display',
+                  ].join(' ')}
                 >
-                  <div className="flex items-center justify-between mb-3">
+                  <Icon size={18} strokeWidth={isActive ? 2 : 1.5} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
                     <span
-                      className="font-mono text-lg sm:text-xl font-semibold tracking-display text-white group-hover:text-white"
-                      style={{ letterSpacing: '0.16em' }}
+                      className={[
+                        'font-mono text-xs tracking-wider uppercase',
+                        isActive ? 'text-bg-primary font-bold' : 'text-text-display font-medium',
+                      ].join(' ')}
+                      style={{ letterSpacing: '0.12em' }}
                     >
                       {item.label}
                     </span>
-                    <span className="text-white/25 group-hover:text-white transition-colors">
-                      {item.icon}
-                    </span>
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-signal-ok shrink-0" />
+                    )}
                   </div>
-                  <p className="text-text-content/40 text-xs font-sans group-hover:text-text-content/70 transition-colors">
-                    {item.desc}
+                  <p
+                    className={[
+                      'text-[11px] font-sans truncate',
+                      isActive ? 'text-bg-primary/75' : 'text-text-content/40 group-hover:text-text-content/60',
+                    ].join(' ')}
+                  >
+                    {item.subtitle}
                   </p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Footer info */}
-          <div className="border-t border-border-subtle pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span className="font-mono text-white/20 text-xs tracking-widest">
-              ENGLISH MISSION CONTROL SYSTEM · SPA PROTOCOL V4
-            </span>
-            <span className="font-mono text-white/20 text-xs tracking-wider">
-              PRESS ESC TO RETURN
-            </span>
-          </div>
+                </div>
+              </NavLink>
+            )
+          })}
         </div>
-      )}
+
+        {/* Drawer Footer */}
+        <div className="p-4 border-t border-border-subtle bg-bg-primary/40 flex items-center justify-between text-[10px] font-mono text-text-content/40">
+          <span>ENGLISH MISSION CONTROL</span>
+          <span className="px-2 py-0.5 rounded border border-border-subtle">LOCAL-FIRST</span>
+        </div>
+      </aside>
     </>
   )
 }

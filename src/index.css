@@ -2,6 +2,41 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-bg-primary: #000000;
+  --color-bg-section: #0a0a0a;
+  --color-text-display: #ffffff;
+  --color-text-content: #f0f0fa;
+  --color-text-secondary: #8a8a93;
+  --color-border-subtle: #3a3a3f;
+}
+
+html.light-theme,
+:root.light-theme {
+  --color-bg-primary: #F4F5F7;
+  --color-bg-section: #EAEBEE;
+  --color-text-display: #0A0A0C;
+  --color-text-content: #1A1A1E;
+  --color-text-secondary: #4A4C56;
+  --color-border-subtle: #D1D3DC;
+}
+
+/* ─────────────────────────────────────────
+   Font Size Scaling (Root HTML)
+───────────────────────────────────────── */
+html[data-font-size="standard"],
+html:not([data-font-size]) {
+  font-size: 16px;
+}
+
+html[data-font-size="large"] {
+  font-size: 18px;
+}
+
+html[data-font-size="extra"] {
+  font-size: 20px;
+}
+
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;
@@ -12,7 +47,9 @@
   }
 
   body {
-    @apply bg-bg-primary text-text-content font-sans antialiased;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-content);
+    @apply font-sans antialiased;
     margin: 0;
     padding: 0;
     min-height: 100vh;
@@ -25,15 +62,14 @@
   }
 
   /* Scrollbar styling */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: #000; }
-  ::-webkit-scrollbar-thumb { background: #3a3a3f; border-radius: 2px; }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--color-bg-primary); }
+  ::-webkit-scrollbar-thumb { background: var(--color-border-subtle); border-radius: 2px; }
   ::-webkit-scrollbar-thumb:hover { background: #5a5a6f; }
 }
 
 /* ─────────────────────────────────────────
    Flashcard 3D flip
-   Parent must have an explicit height (e.g. h-80).
 ───────────────────────────────────────── */
 .card-scene {
   perspective: 1200px;
@@ -64,7 +100,7 @@
 }
 
 /* ─────────────────────────────────────────
-   Pulsing recording ring (strictly white, zero red)
+   Pulsing recording ring
 ───────────────────────────────────────── */
 @keyframes pulse-ring-anim {
   0% {
@@ -100,18 +136,20 @@
   transform-origin: bottom;
 }
 
-
 @layer components {
   /* Ghost pill button */
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2;
-    @apply border border-white/80 rounded-pill;
+    border: 1px solid var(--color-text-display);
+    @apply rounded-pill;
     @apply px-6 py-2.5 text-sm font-mono tracking-display uppercase;
-    @apply text-white bg-transparent;
+    color: var(--color-text-display);
+    @apply bg-transparent;
     @apply transition-all duration-200;
   }
   .btn-ghost:hover {
-    @apply bg-white text-black;
+    background-color: var(--color-text-display);
+    color: var(--color-bg-primary);
   }
   .btn-ghost:active {
     @apply scale-95;
@@ -119,27 +157,35 @@
 
   /* Display heading */
   .heading-display {
-    @apply font-sans font-semibold text-text-display uppercase tracking-display;
+    @apply font-sans font-semibold uppercase tracking-display;
+    color: var(--color-text-display);
   }
 
   /* Data tile */
   .data-tile {
-    @apply bg-bg-section border border-border-subtle rounded-sm p-5;
+    background-color: var(--color-bg-section);
+    border: 1px solid var(--color-border-subtle);
+    @apply rounded-sm p-5;
     @apply flex flex-col gap-1;
   }
 
   /* Thin horizontal rule */
   .hr-subtle {
     border: none;
-    border-top: 1px solid #3a3a3f;
+    border-top: 1px solid var(--color-border-subtle);
   }
 
   /* Answer option button */
   .answer-option {
-    @apply w-full text-left px-5 py-4 rounded-sm border border-border-subtle;
-    @apply text-text-content font-sans text-base;
+    @apply w-full text-left px-5 py-4 rounded-sm;
+    border: 1px solid var(--color-border-subtle);
+    color: var(--color-text-content);
+    @apply font-sans text-base;
     @apply transition-all duration-150 cursor-pointer;
-    @apply bg-transparent hover:border-white/50;
+    @apply bg-transparent;
+  }
+  .answer-option:hover {
+    border-color: var(--color-text-display);
   }
   .answer-option.correct {
     @apply border-signal-ok text-signal-ok;
@@ -153,51 +199,77 @@
 }
 
 /* ─────────────────────────────────────────
-   Light Theme Override (Optional Mode)
-   Canvas #ffffff, text #000000, borders #d0d0d5
+   Light Theme Inversion Overrides
+   Canvas #F4F5F7, Cards #EAEBEE, Text #0A0A0C, Labels #4A4C56, Borders #D1D3DC
 ───────────────────────────────────────── */
 html.light-theme body,
-html.light-theme .bg-bg-primary {
-  background-color: #ffffff !important;
-  color: #1a1a1a !important;
+html.light-theme .bg-bg-primary,
+html.light-theme [style*="background: #000000"],
+html.light-theme [style*="background: rgb(0, 0, 0)"] {
+  background-color: #F4F5F7 !important;
+  color: #0A0A0C !important;
 }
 
 html.light-theme .bg-bg-section,
 html.light-theme [style*="background: #0a0a0a"],
 html.light-theme [style*="background: rgb(10, 10, 10)"] {
-  background-color: #f6f6f9 !important;
+  background-color: #EAEBEE !important;
 }
 
 html.light-theme .border-border-subtle,
 html.light-theme [style*="border-color: #3a3a3f"] {
-  border-color: #dcdce2 !important;
+  border-color: #D1D3DC !important;
 }
 
 html.light-theme .text-white,
 html.light-theme .text-text-display {
-  color: #000000 !important;
+  color: #0A0A0C !important;
 }
 
 html.light-theme .text-text-content {
-  color: #222226 !important;
+  color: #1A1A1E !important;
 }
 
+html.light-theme .text-text-content\/40,
+html.light-theme .text-text-content\/50,
+html.light-theme .text-text-content\/60,
+html.light-theme .text-white\/30,
+html.light-theme .text-white\/40,
+html.light-theme .text-white\/50,
+html.light-theme .text-white\/60 {
+  color: #4A4C56 !important;
+}
+
+html.light-theme header,
 html.light-theme nav {
-  background: rgba(255, 255, 255, 0.96) !important;
-  border-bottom: 1px solid #dcdce2 !important;
+  background-color: rgba(244, 245, 247, 0.95) !important;
+  border-bottom: 1px solid #D1D3DC !important;
 }
 
+html.light-theme header .text-text-display,
+html.light-theme nav .text-text-display,
 html.light-theme nav .text-white {
-  color: #000000 !important;
+  color: #0A0A0C !important;
 }
 
 html.light-theme .btn-ghost {
-  border-color: #000000 !important;
-  color: #000000 !important;
+  border-color: #0A0A0C !important;
+  color: #0A0A0C !important;
 }
 
 html.light-theme .btn-ghost:hover {
-  background-color: #000000 !important;
-  color: #ffffff !important;
+  background-color: #0A0A0C !important;
+  color: #F4F5F7 !important;
 }
 
+html.light-theme input,
+html.light-theme textarea {
+  background-color: #FFFFFF !important;
+  color: #0A0A0C !important;
+  border-color: #D1D3DC !important;
+}
+
+html.light-theme aside {
+  background-color: #EAEBEE !important;
+  border-color: #D1D3DC !important;
+}

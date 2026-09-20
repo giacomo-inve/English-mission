@@ -1,6 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Flame, Zap, RefreshCw, BookOpen, Layers, AlignLeft, Shield, BookMarked, HelpCircle } from 'lucide-react'
+import {
+  Flame,
+  Zap,
+  RefreshCw,
+  Package,
+  Radio,
+  Mic,
+  BookOpen,
+  Rocket,
+  Compass,
+  Shield,
+  UserCheck,
+} from 'lucide-react'
 import { useProgress } from '../hooks/useProgress'
 import { useSRS } from '../hooks/useSRS'
 import { initDB } from '../db/database'
@@ -8,6 +20,7 @@ import StatTile from '../components/StatTile'
 import GhostButton from '../components/GhostButton'
 import AnimatedCounter from '../components/AnimatedCounter'
 import OnboardingTour from '../components/OnboardingTour'
+import PilotModal from '../components/PilotModal'
 
 // ─────────────────────────────────────────
 // Streak ticks — 7 days, data-driven
@@ -32,7 +45,7 @@ function StreakTicks({ ticks }: { ticks: boolean[] }) {
               background: filled ? '#3DDC84' : '#3a3a3f',
             }}
           />
-          <span className="font-mono text-white/20" style={{ fontSize: '9px' }}>
+          <span className="font-mono text-text-content/30" style={{ fontSize: '9px' }}>
             {labels[i]}
           </span>
         </div>
@@ -42,46 +55,59 @@ function StreakTicks({ ticks }: { ticks: boolean[] }) {
 }
 
 // ─────────────────────────────────────────
-// Quick access items
+// Quick access items (Flight Metaphors)
 // ─────────────────────────────────────────
 
 const QUICK_ACCESS = [
   {
-    icon: <BookOpen size={16} strokeWidth={1.5} />,
-    label: 'Vocaboli A1',
+    icon: <Radio size={18} strokeWidth={1.5} />,
+    label: 'COMUNICAZIONI',
+    to: '/ascolto',
+    desc: 'Segnali audio e trascrizione fonetica',
+  },
+  {
+    icon: <Mic size={18} strokeWidth={1.5} />,
+    label: 'VOCAL LINK',
+    to: '/parlato',
+    desc: 'Verifica pronuncia e dialoghi con Web Audio',
+  },
+  {
+    icon: <BookOpen size={18} strokeWidth={1.5} />,
+    label: 'LOGBOOK',
+    to: '/scrittura',
+    desc: 'Diario di bordo e composizione guidata',
+  },
+  {
+    icon: <Package size={18} strokeWidth={1.5} />,
+    label: 'CARICO',
     to: '/vocaboli',
-    desc: 'Catalogo terminologico per categorie',
+    desc: 'Payload lessicale per categorie A1-B2',
   },
   {
-    icon: <Layers size={16} strokeWidth={1.5} />,
-    label: 'Verbi irregolari',
+    icon: <Flame size={18} strokeWidth={1.5} />,
+    label: 'PROPULSIONE',
     to: '/verbi',
-    desc: '38 verbi catalogati per pattern fonetico',
+    desc: 'Tabelle forme verbali e pattern fonetici',
   },
   {
-    icon: <AlignLeft size={16} strokeWidth={1.5} />,
-    label: 'Grammatica',
-    to: '/grammatica',
-    desc: 'Regole sintattiche ed esercizi applicati',
-  },
-  {
-    icon: <BookMarked size={16} strokeWidth={1.5} />,
-    label: 'Flight Manual',
-    to: '/manuale',
-    desc: 'Manuale operativo e protocollo 10 min/giorno',
+    icon: <Rocket size={18} strokeWidth={1.5} />,
+    label: 'MISSIONI',
+    to: '/percorso',
+    desc: 'Albero delle tappe formative A1-B2 sbloccato',
   },
 ]
 
 // ─────────────────────────────────────────
-// Page
+// Page ROTTA
 // ─────────────────────────────────────────
 
 export default function Home() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { progress, loading, reload } = useProgress()
+  const { progress, loading, reload, updatePilotName } = useProgress()
   const { dueCount, refreshDueCount } = useSRS()
   const [tourOpen, setTourOpen] = useState(false)
+  const [pilotModalOpen, setPilotModalOpen] = useState(false)
   const hasAutoTriggeredRef = useRef(false)
   const dismissedRef = useRef(false)
 
@@ -91,6 +117,16 @@ export default function Home() {
       reload()
     })
   }, [refreshDueCount, reload])
+
+  // Check if pilot name needs to be confirmed on first visit
+  useEffect(() => {
+    if (!loading && progress) {
+      const hasConfigured = localStorage.getItem('emc-pilot-configured')
+      if (!hasConfigured) {
+        setPilotModalOpen(true)
+      }
+    }
+  }, [loading, progress])
 
   // Trigger tour on first visit or query parameter ?briefing=true
   useEffect(() => {
@@ -113,184 +149,146 @@ export default function Home() {
     reload()
   }
 
+  const handleSavePilot = async (name: string) => {
+    localStorage.setItem('emc-pilot-configured', 'true')
+    await updatePilotName(name)
+    setPilotModalOpen(false)
+  }
+
   const streak    = progress?.streak   ?? 0
   const todayXP   = progress?.todayXP  ?? 0
   const dailyGoal = progress?.dailyGoal ?? 20
   const freeze    = progress?.streakFreeze ?? 0
   const ticks     = progress?.sevenDayTicks ?? Array(7).fill(false)
+  const pilotName = progress?.pilotName || 'Commander Giacomo'
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col">
+    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col bg-bg-primary">
+      {/* Pilot initial setup modal */}
+      <PilotModal
+        isOpen={pilotModalOpen}
+        currentName={pilotName}
+        onSave={handleSavePilot}
+        isInitialSetup={true}
+      />
 
       {/* ── HERO ── */}
-      <section className="flex-1 flex flex-col items-center justify-center px-6 py-24 text-center">
+      <section className="flex-1 flex flex-col items-center justify-center px-6 py-20 text-center">
+        {/* Pilot Call Sign Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-pill bg-bg-section border border-border-subtle mb-6 shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-signal-ok animate-pulse" />
+          <span className="font-mono text-xs text-text-display font-semibold tracking-wider">
+            PILOTA IN COMANDO: {pilotName.toUpperCase()}
+          </span>
+        </div>
+
         <p
-          className="font-mono text-white/25 text-xs mb-6"
+          className="font-mono text-text-content/40 text-xs mb-4 tracking-widest uppercase"
           style={{ letterSpacing: '0.25em' }}
         >
-          ENGLISH MISSION CONTROL · SESSIONE DI OGGI
+          ROTTA DI VOLO · SESSIONE DI OGGI
         </p>
 
         <h1
-          className="heading-display mb-4 leading-none"
-          style={{ fontSize: 'clamp(3rem, 8vw, 5rem)', letterSpacing: '0.12em' }}
+          className="heading-display mb-4 leading-none text-text-display font-bold"
+          style={{ fontSize: 'clamp(2.75rem, 8vw, 4.75rem)', letterSpacing: '0.12em' }}
         >
           INIZIA ORA
         </h1>
 
-        <p className="text-text-content/45 text-sm max-w-sm mb-10">
-          Un obiettivo chiaro. Nessuna distrazione. Impara ogni giorno.
+        <p className="text-text-content/60 text-sm max-w-sm mb-10">
+          Un obiettivo chiaro. Nessuna distrazione. Impara e parla inglese ogni giorno.
         </p>
 
         <div id="tour-hero-cta" className="flex flex-wrap items-center justify-center gap-3">
           <GhostButton size="lg" onClick={() => navigate('/lezione')}>
-            INIZIA
+            AVVIA SESSIONE
           </GhostButton>
           {dueCount > 0 && (
             <GhostButton size="lg" onClick={() => navigate('/ripasso')}>
-              RIPASSA ({dueCount})
+              ORBITA SRS ({dueCount})
             </GhostButton>
           )}
         </div>
       </section>
 
-      {/* ── DIVIDER ── */}
-      <hr className="hr-subtle mx-6" />
+      {/* ── METRICS TILES ── */}
+      <section
+        id="tour-telemetry-strip"
+        className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-border-subtle max-w-4xl mx-auto w-full px-6 mb-16"
+      >
+        {/* Tile 1 — Streak */}
+        <StatTile
+          label="SERIE ATTIVA"
+          value={streak}
+          subtext="GIORNI CONSECUTIVI"
+          icon={<Flame size={14} className="text-signal-ok" />}
+        >
+          <StreakTicks ticks={ticks} />
+        </StatTile>
 
-      {/* ── STAT TILES ── */}
-      <section id="tour-stat-tiles" className="px-6 py-10">
-        <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Tile 2 — Today XP */}
+        <StatTile
+          label="TELEMETRIA OGGI"
+          value={todayXP}
+          subtext={`OBIETTIVO: ${dailyGoal} XP`}
+          icon={<Zap size={14} className="text-signal-ok" />}
+        >
+          <div className="w-full bg-bg-primary h-1 rounded-full overflow-hidden mt-2">
+            <div
+              className="h-full bg-signal-ok transition-all duration-500"
+              style={{ width: `${Math.min(100, (todayXP / (dailyGoal || 20)) * 100)}%` }}
+            />
+          </div>
+        </StatTile>
 
-          {/* STREAK */}
-          <StatTile
-            label="STREAK"
-            value={
-              <span className="flex items-center gap-2">
-                <Flame size={24} strokeWidth={1.5} className="text-signal-ok" />
-                {loading ? '—' : <AnimatedCounter value={streak} />}
-              </span>
-            }
-            sub={
-              <div>
-                <StreakTicks ticks={ticks} />
-                {freeze > 0 && (
-                  <div className="flex items-center gap-1.5 mt-2">
-                    <Shield size={11} strokeWidth={1.5} className="text-white/30" />
-                    <span className="font-mono text-white/25 text-xs">
-                      {freeze} scudo{freeze !== 1 ? 'i' : ''} disponibile{freeze !== 1 ? '' : ''}
-                    </span>
-                  </div>
-                )}
-              </div>
-            }
-          />
-
-          {/* XP OGGI */}
-          <StatTile
-            label="XP OGGI"
-            value={
-              <span className="flex items-center gap-2">
-                <Zap size={22} strokeWidth={1.5} className="text-white/50" />
-                {loading ? '—' : <AnimatedCounter value={todayXP} />}
-              </span>
-            }
-            sub={
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-mono text-white/20 text-xs">
-                    obiettivo: {dailyGoal} XP
-                  </span>
-                  <span className="font-mono text-white/20 text-xs tabular-nums">
-                    {Math.min(100, Math.round((todayXP / dailyGoal) * 100))}%
-                  </span>
-                </div>
-                {/* Mini progress bar */}
-                <div className="w-full h-px bg-border-subtle overflow-hidden rounded-full">
-                  <div
-                    className="h-full transition-all duration-700"
-                    style={{
-                      width: `${Math.min(100, (todayXP / dailyGoal) * 100)}%`,
-                      background: todayXP >= dailyGoal ? '#3DDC84' : '#ffffff40',
-                    }}
-                  />
-                </div>
-              </div>
-            }
-          />
-
-          {/* RIPASSI IN SCADENZA — cliccabile */}
-          <button
-            id="tour-srs-tile"
-            className="data-tile text-left group transition-colors duration-200"
-            style={{ cursor: dueCount > 0 ? 'pointer' : 'default' }}
-            onClick={() => dueCount > 0 && navigate('/ripasso')}
-          >
-            <p
-              className="text-white/40 font-mono text-xs tracking-widest group-hover:text-white/60 transition-colors"
-              style={{ letterSpacing: '0.18em' }}
-            >
-              RIPASSI IN SCADENZA
-            </p>
-            <div className="text-white font-mono text-3xl tabular-nums leading-tight mt-1">
-              <span className="flex items-center gap-2">
-                <RefreshCw
-                  size={22}
-                  strokeWidth={1.5}
-                  className={dueCount > 0 ? 'text-signal-ok' : 'text-white/40'}
-                />
-                <AnimatedCounter value={dueCount} />
-              </span>
-            </div>
-            <p className="text-white/25 font-mono text-xs mt-1">
-              {dueCount === 0
-                ? 'tutto aggiornato'
-                : `clicca per iniziare il ripasso`}
-            </p>
-          </button>
-        </div>
+        {/* Tile 3 — SRS or Shield */}
+        <StatTile
+          label="ORBITA SRS"
+          value={dueCount}
+          subtext={dueCount === 0 ? 'CODA AGGIORNATA' : 'ELEMENTI IN SCADENZA'}
+          icon={<RefreshCw size={14} className="text-signal-ok" />}
+        >
+          <div className="flex items-center gap-1.5 mt-2 font-mono text-xs text-text-content/40">
+            <Shield size={12} className="text-signal-ok" />
+            <span>SCUDO STREAK: {freeze} ATTIVO</span>
+          </div>
+        </StatTile>
       </section>
 
-      {/* ── DIVIDER ── */}
-      <hr className="hr-subtle mx-6" />
+      {/* ── QUICK ACCESS MODULES (6 Flight Metaphors) ── */}
+      <section className="max-w-4xl mx-auto w-full px-6 pb-20">
+        <p
+          className="font-mono text-text-content/30 text-xs tracking-widest mb-6 uppercase"
+          style={{ letterSpacing: '0.22em' }}
+        >
+          SISTEMI DI BORDO · ACCESSO RAPIDO
+        </p>
 
-      {/* ── QUICK ACCESS & MANUAL ── */}
-      <section className="px-6 py-10 pb-16">
-        <div className="max-w-3xl mx-auto flex items-center justify-between mb-6">
-          <p
-            className="font-mono text-white/25 text-xs tracking-widest uppercase"
-            style={{ letterSpacing: '0.18em' }}
-          >
-            ACCESSO RAPIDO · MODULI E MANUALE
-          </p>
-          <button
-            onClick={() => {
-              dismissedRef.current = false
-              setTourOpen(true)
-            }}
-            className="font-mono text-xs text-white/30 hover:text-white flex items-center gap-1.5 transition-colors"
-          >
-            <HelpCircle size={13} /> MISSION BRIEFING
-          </button>
-        </div>
-
-        <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {QUICK_ACCESS.map(({ icon, label, to, desc }) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {QUICK_ACCESS.map((item) => (
             <button
-              key={to}
-              onClick={() => navigate(to)}
-              className="data-tile text-left group hover:border-white/25 transition-colors duration-200 cursor-pointer"
+              key={item.label}
+              onClick={() => navigate(item.to)}
+              className="group text-left p-5 rounded bg-bg-section border border-border-subtle hover:border-text-display transition-all duration-150"
             >
-              <div className="flex items-center gap-2 text-white/40 group-hover:text-white/80 transition-colors">
-                {icon}
-                <span className="font-mono text-xs tracking-wider uppercase">{label}</span>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs font-bold text-text-display tracking-wider uppercase">
+                  {item.label}
+                </span>
+                <span className="text-text-content/30 group-hover:text-signal-ok transition-colors">
+                  {item.icon}
+                </span>
               </div>
-              <p className="text-text-content/35 text-xs mt-2">{desc}</p>
+              <p className="text-text-content/50 text-xs font-sans group-hover:text-text-content/80 transition-colors">
+                {item.desc}
+              </p>
             </button>
           ))}
         </div>
       </section>
 
-      {/* ── ONBOARDING TOUR MODAL ── */}
+      {/* Onboarding tour modal if needed */}
       <OnboardingTour
         isOpen={tourOpen}
         onClose={handleCloseTour}

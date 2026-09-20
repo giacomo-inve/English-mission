@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Lock, Check, ChevronDown, Rocket, Compass, Globe, Sparkles, X } from 'lucide-react'
+import { Check, Rocket, Compass, Globe, Sparkles, X, Award, CheckCircle2 } from 'lucide-react'
 import GhostButton from '../components/GhostButton'
-import { db, unlockLevel, completeUnit } from '../db/database'
+import { db, completeUnit } from '../db/database'
 import { useProgress } from '../hooks/useProgress'
 import AnimatedCounter from '../components/AnimatedCounter'
+import SectionGuideModal from '../components/SectionGuideModal'
 
 interface MissionUnit {
   id: string
@@ -185,7 +186,6 @@ const MISSIONS: LevelMission[] = [
 export default function Percorso() {
   const navigate = useNavigate()
   const { addXP } = useProgress()
-  const [unlockedLevels, setUnlockedLevels] = useState<string[]>(['A1'])
   const [completedUnits, setCompletedUnits] = useState<string[]>(['u-a1-1'])
   const [testModalMission, setTestModalMission] = useState<LevelMission | null>(null)
   const [testQuestionIdx, setTestQuestionIdx] = useState(0)
@@ -196,9 +196,8 @@ export default function Percorso() {
   // Load progress from DB
   const loadProgress = useCallback(async () => {
     const p = await db.user_progress.toCollection().first()
-    if (p) {
-      if (p.unlockedLevels) setUnlockedLevels(p.unlockedLevels)
-      if (p.completedUnits) setCompletedUnits(p.completedUnits)
+    if (p && p.completedUnits) {
+      setCompletedUnits(p.completedUnits)
     }
   }, [])
 
@@ -206,7 +205,7 @@ export default function Percorso() {
     loadProgress()
   }, [loadProgress])
 
-  // Open unlock test
+  // Open unlock/mastery test
   const startUnlockTest = (mission: LevelMission) => {
     setTestModalMission(mission)
     setTestQuestionIdx(0)
@@ -215,7 +214,7 @@ export default function Percorso() {
     setTestFinished(false)
   }
 
-  // Answer unlock test question
+  // Answer test question
   const handleTestAnswer = async (optionIdx: number) => {
     if (testSelectedOption !== null || !testModalMission) return
     setTestSelectedOption(optionIdx)
@@ -229,16 +228,9 @@ export default function Percorso() {
       if (testQuestionIdx + 1 >= testModalMission.unlockTest.length) {
         setTestFinished(true)
         const correctTotal = newAnswers.filter(Boolean).length
-        // If passed (all 3 correct)
         if (correctTotal >= 2) {
-          // Unlock next level
-          const currentIdx = MISSIONS.findIndex((m) => m.levelId === testModalMission.levelId)
-          if (currentIdx < MISSIONS.length - 1) {
-            const nextLevel = MISSIONS[currentIdx + 1].levelId
-            await unlockLevel(nextLevel)
-            await addXP(50)
-            await loadProgress()
-          }
+          await addXP(50)
+          await loadProgress()
         }
       } else {
         setTestQuestionIdx((q) => q + 1)
@@ -247,228 +239,184 @@ export default function Percorso() {
     }, 800)
   }
 
+  const handleUnitClick = async (unitId: string) => {
+    await completeUnit(unitId)
+    await loadProgress()
+    navigate('/lezione')
+  }
+
   return (
-    <div className="h-[calc(100vh-3.5rem)] overflow-y-scroll snap-y snap-mandatory bg-bg-primary">
-      {MISSIONS.map((mission, index) => {
-        const isUnlocked = unlockedLevels.includes(mission.levelId)
-        const unitsInLevel = mission.units
-        const completedInLevel = unitsInLevel.filter((u) => completedUnits.includes(u.id))
-        const progressPct = Math.round((completedInLevel.length / unitsInLevel.length) * 100)
-        const nextMission = MISSIONS[index + 1]
-        const isNextUnlocked = nextMission ? unlockedLevels.includes(nextMission.levelId) : true
-        const canTakeUnlockTest = isUnlocked && !isNextUnlocked && nextMission
-
-        const Icon = mission.icon
-
-        return (
-          <section
-            key={mission.levelId}
-            className={`min-h-[calc(100vh-3.5rem)] snap-start flex flex-col justify-between p-6 sm:p-12 border-b border-border-subtle relative transition-opacity duration-300 ${
-              isUnlocked ? 'opacity-100' : 'opacity-40'
-            }`}
+    <div className="min-h-[calc(100vh-3.5rem)] flex flex-col bg-bg-primary px-4 sm:px-6 py-10 max-w-4xl mx-auto">
+      {/* ── HEADER ── */}
+      <div className="border-b border-border-subtle pb-6 mb-8 flex items-start justify-between">
+        <div>
+          <p
+            className="font-mono text-text-content/40 text-xs tracking-widest mb-1"
+            style={{ letterSpacing: '0.22em' }}
           >
-            {/* Top Indicator */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-white/30 text-xs tracking-widest" style={{ letterSpacing: '0.22em' }}>
-                  MISSIONE {index + 1} DI {MISSIONS.length} · {mission.code}
-                </span>
-                {isUnlocked ? (
-                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-sm border border-signal-ok text-signal-ok">
-                    {progressPct === 100 ? 'COMPLETATA' : 'ATTIVA'}
-                  </span>
-                ) : (
-                  <span className="font-mono text-xs px-2.5 py-0.5 rounded-sm border border-border-subtle text-white/30 flex items-center gap-1">
-                    <Lock size={11} /> BLOCCATA
-                  </span>
-                )}
-              </div>
+            PIANO DI VOLO COMPLETO · SISTEMA PROGRESSIVO A1-B2
+          </p>
+          <h1 className="heading-display text-3xl sm:text-4xl text-text-display flex items-center gap-3">
+            <Rocket size={30} strokeWidth={1.5} className="text-signal-ok" /> MISSIONI
+          </h1>
+        </div>
 
-              {/* Progress 2px line indicator */}
-              <div className="flex items-center gap-3 w-48">
-                <span className="font-mono text-xs text-white/30 tabular-nums">
-                  <AnimatedCounter value={progressPct} />%
-                </span>
-                <div className="flex-1 h-0.5 bg-border-subtle overflow-hidden">
-                  <div
-                    className="h-full bg-white transition-all duration-700"
-                    style={{ width: `${progressPct}%` }}
-                  />
+        <SectionGuideModal
+          sectionTitle="MISSIONI · GUIDA OPERATIVA"
+          sectionSubtitle="ALBERO DELLE TAPPE FORMATIVE"
+          objective="Seguire o selezionare liberamente le tappe da A1 a B2. Tutti i livelli sono aperti e navigabili liberamente senza vincoli forzati."
+          methodology={[
+            'Tutti i livelli (A1, A2, B1, B2) sono sbloccati per esplorazione o verifica immediata.',
+            'Ogni unità formativa affronta un pilastro grammaticale o lessicale essenziale.',
+            'Puoi sostenere l\'esame facoltativo di livello per guadagnare +50 XP bonus.',
+          ]}
+          controls={[
+            { name: 'UNITÀ DI MISSIONE', desc: 'Accesso diretto alla lezione associata.' },
+            { name: 'ESAME DI LIVELLO', desc: 'Test rapido a 3 quesiti per verificare la padronanza della tappa.' },
+          ]}
+        />
+      </div>
+
+      {/* Global Unlocked Notice */}
+      <div className="mb-8 p-4 rounded bg-signal-ok/10 border border-signal-ok/30 flex items-center justify-between text-xs font-mono">
+        <span className="text-signal-ok flex items-center gap-2">
+          <CheckCircle2 size={16} /> TUTTI I LIVELLI A1 · A2 · B1 · B2 SONO TOTALMENTE SBLOCCATI
+        </span>
+        <span className="text-text-content/50 hidden sm:inline">ACCESSO DIRETTO NOMINALE</span>
+      </div>
+
+      {/* ── MISSIONS TREE ── */}
+      <div className="space-y-8">
+        {MISSIONS.map((mission) => {
+          const Icon = mission.icon
+
+          return (
+            <div
+              key={mission.levelId}
+              className="bg-bg-section border border-border-subtle rounded-md p-6 sm:p-8 shadow-md"
+            >
+              {/* Mission Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-subtle pb-6 mb-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full border border-signal-ok/40 bg-signal-ok/10 flex items-center justify-center text-signal-ok shrink-0">
+                    <Icon size={22} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs px-2.5 py-0.5 rounded bg-signal-ok/20 text-signal-ok border border-signal-ok/30 font-bold">
+                        {mission.code}
+                      </span>
+                      <span className="font-mono text-xs text-text-content/40 tracking-widest uppercase">
+                        TAPPA ORBITALE
+                      </span>
+                    </div>
+                    <h2 className="heading-display text-xl sm:text-2xl text-text-display mt-1">
+                      {mission.name}
+                    </h2>
+                    <p className="font-mono text-xs text-text-content/60 mt-0.5">
+                      {mission.subtitle}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Central Content */}
-            <div className="max-w-5xl my-auto py-8">
-              <div className="flex items-center gap-3 mb-2">
-                <Icon size={24} className="text-white/60" strokeWidth={1.5} />
-                <span className="font-mono text-xs text-white/35 tracking-widest uppercase">
-                  {mission.subtitle}
-                </span>
+                <button
+                  onClick={() => startUnlockTest(mission)}
+                  className="px-4 py-2 rounded-pill border border-border-subtle hover:border-text-display text-text-display font-mono text-xs tracking-wider flex items-center gap-2 self-start sm:self-center transition-colors"
+                >
+                  <Award size={14} className="text-signal-ok" /> ESAME TAPPA (+50 XP)
+                </button>
               </div>
 
-              {/* Display Title 60-80px in UPPERCASE */}
-              <h2
-                className="heading-display text-white font-bold leading-none mb-6"
-                style={{ fontSize: 'clamp(2.5rem, 7vw, 4.8rem)' }}
-              >
-                {mission.name}
-              </h2>
-
-              <p className="text-text-content/50 font-sans text-sm sm:text-base max-w-2xl mb-10 leading-relaxed">
+              <p className="text-text-content/70 text-xs sm:text-sm font-sans mb-6 leading-relaxed">
                 {mission.themeDesc}
               </p>
 
-              {/* Units List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-10">
+              {/* Units Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {mission.units.map((unit) => {
                   const isDone = completedUnits.includes(unit.id)
+
                   return (
-                    <div
+                    <button
                       key={unit.id}
-                      className="p-4 rounded-sm border border-border-subtle flex items-start justify-between gap-3 group"
-                      style={{ background: '#0a0a0a' }}
+                      onClick={() => handleUnitClick(unit.id)}
+                      className="group text-left p-4 rounded bg-bg-primary/60 border border-border-subtle hover:border-text-display transition-all"
                     >
-                      <div>
-                        <p className="font-mono text-xs text-white tracking-wider font-semibold mb-1">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-mono text-xs text-text-display font-semibold group-hover:text-signal-ok transition-colors">
                           {unit.title}
-                        </p>
-                        <p className="text-text-content/40 text-xs leading-normal">
-                          {unit.desc}
-                        </p>
+                        </span>
+                        {isDone ? (
+                          <span className="text-signal-ok">
+                            <Check size={14} strokeWidth={2.5} />
+                          </span>
+                        ) : (
+                          <span className="font-mono text-[10px] text-text-content/40 uppercase group-hover:text-text-display">
+                            AVVIA &rarr;
+                          </span>
+                        )}
                       </div>
-                      <span
-                        className="font-mono text-xs px-2 py-0.5 rounded-sm border shrink-0 text-center"
-                        style={{
-                          borderColor: isDone ? '#3DDC84' : '#3a3a3f',
-                          color: isDone ? '#3DDC84' : 'rgba(255,255,255,0.25)',
-                        }}
-                      >
-                        {isDone ? 'COMPLETATA' : isUnlocked ? 'IN CORSO' : 'BLOCCATA'}
-                      </span>
-                    </div>
+                      <p className="text-text-content/50 text-xs font-sans line-clamp-2">
+                        {unit.desc}
+                      </p>
+                    </button>
                   )
                 })}
               </div>
-
-              {/* Single Ghost CTA Button */}
-              <div className="flex flex-wrap items-center gap-4">
-                {isUnlocked ? (
-                  canTakeUnlockTest ? (
-                    <GhostButton size="lg" onClick={() => startUnlockTest(mission)}>
-                      TEST DI SBLOCCO {nextMission?.name}
-                    </GhostButton>
-                  ) : (
-                    <GhostButton size="lg" onClick={() => navigate('/lezione')}>
-                      CONTINUA MISSIONE
-                    </GhostButton>
-                  )
-                ) : (
-                  <button
-                    disabled
-                    className="font-mono text-xs px-6 py-3 rounded-pill border border-border-subtle text-white/25 cursor-not-allowed flex items-center gap-2"
-                  >
-                    <Lock size={13} /> MISSIONE BLOCCATA (SUPERA TEST LIVELLO PRECEDENTE)
-                  </button>
-                )}
-              </div>
             </div>
+          )
+        })}
+      </div>
 
-            {/* Bottom snap indicator */}
-            <div className="flex items-center justify-between border-t border-border-subtle pt-4 text-white/20 font-mono text-xs">
-              <span style={{ letterSpacing: '0.18em' }}>
-                SPACEX FLIGHT TRAJECTORY · {mission.levelId}
-              </span>
-              {index < MISSIONS.length - 1 && (
-                <span className="flex items-center gap-1">
-                  SCORRI IN BASSO <ChevronDown size={12} />
-                </span>
-              )}
-            </div>
-          </section>
-        )
-      })}
-
-      {/* ── INTERACTIVE UNLOCK TEST MODAL ── */}
+      {/* ── OPTIONAL TEST MODAL ── */}
       {testModalMission && (
-        <div
-          className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6"
-          style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
-        >
-          <div
-            className="w-full max-w-xl p-6 sm:p-8 rounded-sm border border-border-subtle flex flex-col justify-between"
-            style={{ background: '#0a0a0a' }}
-          >
-            {/* Modal Header */}
+        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-lg bg-bg-section border border-border-subtle rounded-md p-6 sm:p-8 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border-subtle pb-4 mb-6">
               <div>
-                <span className="font-mono text-xs text-white/30 tracking-widest">
-                  TEST DI SBLOCCO MISSIONE · {testModalMission.name}
-                </span>
-                <h3 className="heading-display text-xl text-white mt-0.5">
-                  VERIFICA TRAIETTORIA
+                <p className="font-mono text-xs text-text-content/40 tracking-widest uppercase">
+                  VERIFICA TELEMETRICA · {testModalMission.code}
+                </p>
+                <h3 className="heading-display text-xl text-text-display">
+                  {testModalMission.name}
                 </h3>
               </div>
               <button
                 onClick={() => setTestModalMission(null)}
-                className="text-white/40 hover:text-white"
+                className="text-text-content/40 hover:text-text-display"
               >
-                <X size={16} />
+                <X size={20} />
               </button>
             </div>
 
-            {/* Test Content or Results */}
             {!testFinished ? (
               <div>
-                <div className="flex justify-between items-center mb-4">
-                  <span className="font-mono text-xs text-white/30 tabular-nums">
-                    QUESITO {testQuestionIdx + 1} / {testModalMission.unlockTest.length}
-                  </span>
-                  <div className="w-24 h-0.5 bg-border-subtle overflow-hidden">
-                    <div
-                      className="h-full bg-white transition-all duration-300"
-                      style={{
-                        width: `${((testQuestionIdx + 1) / testModalMission.unlockTest.length) * 100}%`,
-                      }}
-                    />
-                  </div>
+                <div className="flex items-center justify-between mb-4 font-mono text-xs text-text-content/50">
+                  <span>QUESITO {testQuestionIdx + 1} DI {testModalMission.unlockTest.length}</span>
+                  <span>ESAME DI PADRONANZA</span>
                 </div>
 
-                <p className="font-sans text-base text-white leading-relaxed mb-6">
+                <p className="text-text-display font-sans text-base font-medium mb-6 leading-relaxed">
                   {testModalMission.unlockTest[testQuestionIdx].question}
                 </p>
 
-                <div className="space-y-2 mb-6">
+                <div className="space-y-2.5 mb-6">
                   {testModalMission.unlockTest[testQuestionIdx].options.map((opt, i) => {
                     const isSelected = testSelectedOption === i
                     const isCorrect = i === testModalMission.unlockTest[testQuestionIdx].correctIndex
-                    const answered = testSelectedOption !== null
 
-                    let borderColor = '#3a3a3f'
-                    let textColor = 'rgba(240,240,250,0.7)'
-
-                    if (answered) {
-                      if (isCorrect) {
-                        borderColor = '#3DDC84'
-                        textColor = '#3DDC84'
-                      } else if (isSelected) {
-                        borderColor = '#FF5C5C'
-                        textColor = '#FF5C5C'
-                      }
+                    let btnStyle = 'border-border-subtle text-text-content hover:border-text-display'
+                    if (testSelectedOption !== null) {
+                      if (isCorrect) btnStyle = 'border-signal-ok text-signal-ok bg-signal-ok/10'
+                      else if (isSelected) btnStyle = 'border-signal-err text-signal-err bg-signal-err/10'
                     }
 
                     return (
                       <button
                         key={i}
                         onClick={() => handleTestAnswer(i)}
-                        disabled={answered}
-                        className="w-full text-left font-sans text-sm p-4 rounded-sm border transition-all duration-150"
-                        style={{
-                          borderColor,
-                          color: textColor,
-                          background: 'transparent',
-                          cursor: answered ? 'default' : 'pointer',
-                        }}
+                        disabled={testSelectedOption !== null}
+                        className={`w-full text-left p-3.5 rounded border text-sm font-sans transition-all ${btnStyle}`}
                       >
                         {opt}
                       </button>
@@ -480,41 +428,33 @@ export default function Percorso() {
               <div className="text-center py-6">
                 {testAnswers.filter(Boolean).length >= 2 ? (
                   <>
-                    <div className="w-12 h-12 rounded-full border border-signal-ok flex items-center justify-center mx-auto mb-4 text-signal-ok">
-                      <Check size={24} strokeWidth={2} />
+                    <div className="w-14 h-14 rounded-full bg-signal-ok/20 border border-signal-ok text-signal-ok mx-auto flex items-center justify-center mb-4">
+                      <Check size={28} strokeWidth={2.5} />
                     </div>
-                    <h4 className="heading-display text-2xl text-white mb-2">
-                      TEST SUPERATO CON SUCCESSO
+                    <h4 className="heading-display text-2xl text-text-display mb-2">
+                      ESAME SUPERATO!
                     </h4>
-                    <p className="text-text-content/50 text-sm mb-6 max-w-sm mx-auto">
-                      Hai dimostrato padronanza sufficiente per sbloccare la rotta verso il livello successivo. +50 XP assegnati.
+                    <p className="text-text-content/70 text-sm mb-6">
+                      Hai dimostrato ottima padronanza dei concetti chiave di questa tappa. Telemetria aggiornata con +50 XP!
                     </p>
-                    <GhostButton
-                      size="lg"
-                      onClick={() => {
-                        setTestModalMission(null)
-                      }}
-                    >
-                      AVVIA NUOVA ORBITA
-                    </GhostButton>
                   </>
                 ) : (
                   <>
-                    <h4 className="heading-display text-2xl text-white mb-2">
-                      REQUISITI NON SODDISFATTI
+                    <h4 className="heading-display text-2xl text-text-display mb-2">
+                      REVISIONE RACCOMANDATA
                     </h4>
-                    <p className="text-text-content/50 text-sm mb-6 max-w-sm mx-auto">
-                      Risposte corrette: {testAnswers.filter(Boolean).length} / {testModalMission.unlockTest.length}. Ripassa le unità per riprovare il test di sblocco.
+                    <p className="text-text-content/70 text-sm mb-6">
+                      Hai ottenuto {testAnswers.filter(Boolean).length} risposte corrette su {testModalMission.unlockTest.length}. Rivedi le unità e riprova quando vuoi!
                     </p>
-                    <GhostButton
-                      onClick={() => {
-                        startUnlockTest(testModalMission)
-                      }}
-                    >
-                      RIPROVA TEST
-                    </GhostButton>
                   </>
                 )}
+
+                <button
+                  onClick={() => setTestModalMission(null)}
+                  className="px-6 py-2.5 rounded-pill bg-text-display text-bg-primary font-mono text-xs font-semibold"
+                >
+                  CHIUDI ESAME
+                </button>
               </div>
             )}
           </div>
